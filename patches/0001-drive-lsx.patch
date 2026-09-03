@@ -1,0 +1,74 @@
+diff --git a/src/epanet.c b/src/epanet.c
+index a0084b3..feb9cfd 100644
+--- a/src/epanet.c
++++ b/src/epanet.c
+@@ -17,6 +17,7 @@
+ #include <float.h>
+ #include <math.h>
+ 
++#include "epanet-lsx.h"
+ #include "epanet2_2.h"
+ #include "types.h"
+ #include "funcs.h"
+@@ -168,6 +169,9 @@ int DLLEXPORT EN_init(EN_Project p, const char *rptFile, const char *outFile,
+     convertunits(p);
+     p->parser.MaxPats = 0;
+     p->Openflag = TRUE;
++
++    LSX_init(p);
++
+     return errcode;
+ }
+ 
+@@ -184,7 +188,9 @@ int DLLEXPORT EN_open(EN_Project p, const char *inpFile, const char *rptFile,
+  */
+  {
+    writewin(p->viewprog, FMT100);
+-   return openproject(p, inpFile, rptFile, outFile, FALSE);
++   int result = openproject(p, inpFile, rptFile, outFile, FALSE);
++   LSX_open(p, inpFile);
++   return result;
+  }     
+ 
+ int DLLEXPORT EN_openX(EN_Project p, const char *inpFile,
+@@ -200,7 +206,9 @@ int DLLEXPORT EN_openX(EN_Project p, const char *inpFile,
+  */
+ {
+     writewin(p->viewprog, FMT100);
+-    return openproject(p, inpFile, rptFile, outFile, TRUE);
++    int result = openproject(p, inpFile, rptFile, outFile, TRUE);
++    LSX_open(p, inpFile);
++    return result;
+ }    
+ 
+ int DLLEXPORT EN_gettitle(EN_Project p, char *line1, char *line2, char *line3)
+@@ -561,6 +569,9 @@ int DLLEXPORT EN_runH(EN_Project p, long *currentTime)
+     if (!p->hydraul.OpenHflag) return 103;
+     errcode = runhyd(p, currentTime);
+     if (errcode) errmsg(p, errcode);
++
++    LSX_run(p);
++
+     return errcode;
+ }
+ 
+@@ -580,6 +591,9 @@ int DLLEXPORT EN_nextH(EN_Project p, long *tStep)
+     errcode = nexthyd(p, tStep);
+     if (errcode) errmsg(p, errcode);
+     else if (p->outfile.Saveflag && *tStep == 0) p->outfile.SaveHflag = TRUE;
++
++    LSX_next(p);
++
+     return errcode;
+ }
+ 
+@@ -599,6 +613,9 @@ int DLLEXPORT EN_closeH(EN_Project p)
+       closehyd(p);
+   }
+   p->hydraul.OpenHflag = FALSE;
++
++  LSX_close(p);
++
+   return 0;
+ }
+ 
