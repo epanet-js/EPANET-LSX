@@ -1,3 +1,6 @@
+# Build output (includes EPANET sources fetched by scripts/init.sh)
+build/
+
 # Prerequisites
 *.d
 
