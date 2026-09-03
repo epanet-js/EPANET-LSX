@@ -1,0 +1,91 @@
+diff --git a/src/enumstxt.h b/src/enumstxt.h
+index 2a9b7da..0e64b96 100755
+--- a/src/enumstxt.h
++++ b/src/enumstxt.h
+@@ -137,8 +137,8 @@ char *SectTxt[]         = {s_TITLE,     s_JUNCTIONS, s_RESERVOIRS,
+                            s_REACTIONS, s_MIXING,    s_REPORT,
+                            s_TIMES,     s_OPTIONS,   s_COORDS,
+                            s_VERTICES,  s_LABELS,    s_BACKDROP,
+-                           s_TAGS,      s_LEAKAGE,   s_END,
+-                           NULL};
++                           s_TAGS,      s_LEAKAGE,   s_SCRIPT,
++                           s_END,       NULL};
+ 
+ char *Fldname[]         = {t_ELEV,      t_DEMAND,    t_HEAD,
+                            t_PRESSURE,  t_QUALITY,   t_LENGTH,
+diff --git a/src/input2.c b/src/input2.c
+index a959926..291453c 100644
+--- a/src/input2.c
++++ b/src/input2.c
+@@ -137,6 +137,26 @@ int netsize(Project *pr)
+     return errcode;
+ }
+ 
++static int startsnewsection(Parser *parser, int sect)
++/*
++**--------------------------------------------------------------
++**  Input:   parser = the input parser
++**           sect   = current input section
++**  Output:  returns TRUE if the current line begins a new section
++**  Purpose: decides whether a line starting with '[' opens a new
++**           section. Inside a [SCRIPT] section a line may be Lua
++**           code that starts with '[', so a new section is only
++**           recognized when the whole line is a single token that
++**           matches a known section name.
++**--------------------------------------------------------------
++*/
++{
++    if (parser->Tok[0][0] != '[') return FALSE;
++    if (sect != _SCRIPT) return TRUE;
++
++    return (parser->Ntokens == 1 && findmatch(parser->Tok[0], SectTxt) >= 0);
++}
++
+ int readdata(Project *pr)
+ /*
+ **--------------------------------------------------------------
+@@ -220,7 +240,7 @@ int readdata(Project *pr)
+         }
+ 
+         // Check if at start of a new input section
+-        if (parser->Tok[0][0] == '[')
++        if (startsnewsection(parser, sect))
+         {
+             newsect = findmatch(parser->Tok[0], SectTxt);
+             if (newsect >= 0)
+@@ -324,6 +344,10 @@ int newline(Project *pr, int sect, char *line)
+         case _COORDS:      return (coordata(pr));
+         case _VERTICES:    return (vertexdata(pr));
+ 
++        // [SCRIPT] contents are Lua code handled by the LSX layer, not the
++        // base engine; ignore each line here so parsing does not fail.
++        case _SCRIPT:      return (0);
++
+         // Data in these sections are not used for any computations
+         case _LABELS:
+         case _BACKDROP:
+diff --git a/src/text.h b/src/text.h
+index 1525f4c..1110512 100755
+--- a/src/text.h
++++ b/src/text.h
+@@ -215,6 +215,7 @@
+ #define   s_SOURCES     "[SOURCES]"
+ #define   s_EMITTERS    "[EMITTERS]"
+ #define   s_LEAKAGE     "[LEAKAGE]"
++#define   s_SCRIPT      "[SCRIPT]"
+ #define   s_PATTERNS    "[PATTERNS]"
+ #define   s_CURVES      "[CURVES]"
+ #define   s_QUALITY     "[QUALITY]"
+diff --git a/src/types.h b/src/types.h
+index c40d440..da72b45 100755
+--- a/src/types.h
++++ b/src/types.h
+@@ -298,7 +298,7 @@ typedef enum {
+   _VALVES, _CONTROLS, _RULES, _DEMANDS, _SOURCES, _EMITTERS,
+   _PATTERNS, _CURVES, _QUALITY, _STATUS, _ROUGHNESS, _ENERGY,
+   _REACTIONS, _MIXING, _REPORT, _TIMES, _OPTIONS,
+-    _COORDS, _VERTICES, _LABELS, _BACKDROP, _TAGS, _LEAKAGE, _END
++    _COORDS, _VERTICES, _LABELS, _BACKDROP, _TAGS, _LEAKAGE, _SCRIPT, _END
+ } SectionType;
+ 
+ typedef enum {

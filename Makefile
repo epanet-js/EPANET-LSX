@@ -2,7 +2,7 @@
 
 EPANET_DIR := build/EPANET
 CMAKE_DIR  := build/cmake
-PATCH      := $(CURDIR)/patches/0001-drive-lsx.patch
+PATCH_DIR  := $(CURDIR)/patches
 
 all: build
 
@@ -10,19 +10,22 @@ all: build
 init:
 	./scripts/init.sh
 
-# Apply the LSX integration patch to the EPANET sources (idempotent).
+# Apply every patch in patches/ to the EPANET sources, in order (idempotent).
 patch: init
 	@if [ ! -d "$(EPANET_DIR)" ]; then \
 		echo "EPANET sources missing at $(EPANET_DIR); run 'make init'"; exit 1; \
 	fi
 	@cd $(EPANET_DIR) && \
-	if git apply --reverse --check "$(PATCH)" >/dev/null 2>&1; then \
-		echo "LSX patch already applied."; \
-	elif git apply --check "$(PATCH)" >/dev/null 2>&1; then \
-		git apply "$(PATCH)" && echo "LSX patch applied."; \
-	else \
-		echo "ERROR: LSX patch does not apply cleanly to $(EPANET_DIR)."; exit 1; \
-	fi
+	for p in $$(ls "$(PATCH_DIR)"/*.patch 2>/dev/null | sort); do \
+		name=$$(basename "$$p"); \
+		if git apply --reverse --check "$$p" >/dev/null 2>&1; then \
+			echo "$$name already applied."; \
+		elif git apply --check "$$p" >/dev/null 2>&1; then \
+			git apply "$$p" && echo "$$name applied."; \
+		else \
+			echo "ERROR: $$name does not apply cleanly to $(EPANET_DIR)."; exit 1; \
+		fi; \
+	done
 
 # Patch, then configure and build the epanet2 shared library into build/.
 build: patch
