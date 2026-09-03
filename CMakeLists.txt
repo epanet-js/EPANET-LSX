@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
 
-project(epanet-lsx LANGUAGES C)
+project(epanet-lsx LANGUAGES C CXX)
 
 set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_STANDARD_REQUIRED ON)
@@ -51,3 +51,50 @@ if(MSVC)
 endif()
 
 target_link_libraries(runepanet PRIVATE epanet2 m)
+
+# Each test binary links the full EPANET engine + LSX sources directly
+enable_testing()
+
+set(CEST_DIR ${CMAKE_SOURCE_DIR}/vendor)   # vendored cest header (vendor/cest)
+
+# ASan/LSan on the test targets so create/destroy pair tests catch leaks.
+set(SAN_COMPILE -fsanitize=address)
+set(SAN_LINK -fsanitize=address)
+if(NOT CMAKE_SYSTEM_NAME MATCHES "Darwin")
+    list(APPEND SAN_LINK -static-libasan)
+endif()
+
+# The engine + LSX C sources tests compile in (same set as the library; the
+# CLI main lives in run/main.c, which is not part of these globs).
+set(TEST_LIB_SOURCES ${EPANET_SOURCES} ${LSX_SOURCES})
+
+file(GLOB_RECURSE TEST_FILES CONFIGURE_DEPENDS ${CMAKE_SOURCE_DIR}/tests/*.test.cpp)
+
+add_custom_target(build_tests)
+
+foreach(TEST_FILE ${TEST_FILES})
+    get_filename_component(FILE_NAME ${TEST_FILE} NAME_WE)
+    set(EXEC_NAME test_${FILE_NAME})
+    add_executable(${EXEC_NAME} EXCLUDE_FROM_ALL ${TEST_FILE} ${TEST_LIB_SOURCES})
+    target_include_directories(${EXEC_NAME} PRIVATE
+        ${CEST_DIR}                      # the 'cest' header
+        ${CMAKE_SOURCE_DIR}/include      # LSX public headers
+        ${CMAKE_SOURCE_DIR}/src          # LSX + Lua headers
+        ${EPANET_DIR}/include            # EPANET toolkit headers
+        ${EPANET_DIR}/src
+        ${EPANET_DIR}/src/util)
+    # .c sources compile as C99, the .test.cpp as C++20; sanitizers on both.
+    target_compile_options(${EXEC_NAME} PRIVATE
+        -g -O0
+        $<$<COMPILE_LANGUAGE:CXX>:-std=c++20>
+        $<$<COMPILE_LANGUAGE:C>:-std=gnu99>
+        ${SAN_COMPILE})
+    target_link_options(${EXEC_NAME} PRIVATE ${SAN_LINK})
+    target_link_libraries(${EXEC_NAME} PRIVATE m)
+    target_compile_definitions(${EXEC_NAME} PRIVATE
+        FIXTURES_DIR="${CMAKE_SOURCE_DIR}/tests/fixtures")
+    set_target_properties(${EXEC_NAME} PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/build)
+    add_test(NAME ${EXEC_NAME} COMMAND ${EXEC_NAME})
+    add_dependencies(build_tests ${EXEC_NAME})
+endforeach()

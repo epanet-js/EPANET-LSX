@@ -1,4 +1,4 @@
-.PHONY: all init patch build clean
+.PHONY: all init patch build test clean
 
 CMAKE_DIR := build/cmake
 
@@ -16,6 +16,11 @@ patch: init
 build: patch
 	cmake -S . -B $(CMAKE_DIR)
 	cmake --build $(CMAKE_DIR)
+
+# Build every *.test.cpp into a test_ binary, then run the suite.
+test: build
+	cmake --build $(CMAKE_DIR) --target build_tests
+	./scripts/run-tests.sh
 
 # Remove the build folder (EPANET sources, patch state, and build output).
 clean:
