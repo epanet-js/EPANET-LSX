@@ -1,0 +1,81 @@
+diff --git a/include/epanet2_2.h b/include/epanet2_2.h
+index eca5095..a59aad8 100644
+--- a/include/epanet2_2.h
++++ b/include/epanet2_2.h
+@@ -72,6 +72,25 @@ typedef struct Project *EN_Project;
+   */
+   int DLLEXPORT EN_deleteproject(EN_Project ph);
+ 
++  /**
++  @brief Attaches an opaque, host-defined data pointer to a project.
++  @param ph an EPANET project handle.
++  @param data a pointer to arbitrary host data (or NULL to clear it).
++  @return an error code.
++
++  The pointer is stored on the project and never dereferenced by EPANET; the
++  host is responsible for its lifetime. Retrieve it with ::EN_getprivatedata.
++  */
++  int DLLEXPORT EN_setprivatedata(EN_Project ph, void *data);
++
++  /**
++  @brief Retrieves the opaque, host-defined data pointer attached to a project.
++  @param ph an EPANET project handle.
++  @return the pointer previously set with ::EN_setprivatedata, or NULL if none
++  was set (or if ph is NULL).
++  */
++  void * DLLEXPORT EN_getprivatedata(EN_Project ph);
++
+   /**
+   @brief Runs a complete EPANET simulation.
+   @param ph an EPANET project handle.
+diff --git a/src/epanet.c b/src/epanet.c
+index feb9cfd..68a05fb 100644
+--- a/src/epanet.c
++++ b/src/epanet.c
+@@ -72,6 +72,33 @@ int DLLEXPORT EN_deleteproject(EN_Project p)
+     return 0;
+ }
+ 
++int DLLEXPORT EN_setprivatedata(EN_Project p, void *data)
++/*----------------------------------------------------------------
++**  Input:   data = opaque host-defined pointer (or NULL)
++**  Output:  none
++**  Returns: error code
++**  Purpose: attaches an opaque host data pointer to a project
++**----------------------------------------------------------------
++*/
++{
++    if (p == NULL) return 102;
++    p->private_data = data;
++    return 0;
++}
++
++void * DLLEXPORT EN_getprivatedata(EN_Project p)
++/*----------------------------------------------------------------
++**  Input:   none
++**  Output:  none
++**  Returns: the opaque host data pointer, or NULL if none/invalid
++**  Purpose: retrieves the opaque host data pointer of a project
++**----------------------------------------------------------------
++*/
++{
++    if (p == NULL) return NULL;
++    return p->private_data;
++}
++
+ int DLLEXPORT EN_runproject(EN_Project p, const char *inpFile,
+                             const char *rptFile, const char *outFile,
+                             void (*pviewprog)(char *))
+diff --git a/src/types.h b/src/types.h
+index da72b45..bc9fe80 100755
+--- a/src/types.h
++++ b/src/types.h
+@@ -923,6 +923,8 @@ typedef struct Project {
+ 
+   void (* viewprog) (char *);    // Pointer to progress viewing function
+ 
++  void *private_data;            // Opaque per-project data for host extensions
++
+ } Project, *EN_Project;
+ 
+ #endif
