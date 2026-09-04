@@ -57,8 +57,8 @@ read far more often than it is written.
 
 - Public functions: `Module_Function(type arg_name)` (module prefix, PascalCase)
   to match the EPANET toolkit convention.
-- Static/private helpers: `lowerCamelCase`, signalling internal scope.
-- Descriptive identifiers (`nodeIndex`, not `n`).
+- Static/private helpers: `calculatePressure`, signalling internal scope.
+- Descriptive identifiers (`node_index`, not `n`).
 - Magic numbers become named `enum` values or `const`, not bare literals.
 
 **Structure:**

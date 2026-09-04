@@ -1,8 +1,13 @@
 #include <stdio.h>
+#include <stdlib.h>
+
 #include "epanet-lsx.h"
+#include "inp-parser.h"
 
 int LSX_open(EN_Project project, const char *inp_path) {
-  printf("LSX_open() called\n");
+  free(EN_getprivatedata(project));
+  const char *script = InpParser_ReadScript(inp_path);
+  EN_setprivatedata(project, (void *)script);
   return 0;
 }
 
@@ -22,6 +27,7 @@ int LSX_next(EN_Project project) {
 }
 
 int LSX_close(EN_Project project) {
-  printf("LSX_close() called\n");
+  free(EN_getprivatedata(project));
+  EN_setprivatedata(project, NULL);
   return 0;
 }

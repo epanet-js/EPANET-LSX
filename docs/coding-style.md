@@ -17,7 +17,8 @@ describe("EPANET-LSX smoke", []() {
 ## Braces and structure
 
 - Use K&R style for braces, Pascal case for public function names (`ReturnType *Module_Run(void);`).
-- Use snake case for private module functions (`int doSomething(int x);`).
+- Use camel case for private module functions (`int doSomething(int x);`).
+- Use snake case for local variables and parameters (`node_index`, not `nodeIndex`).
 - Keep functions small and single-purpose; keep files focused on one module.
 - Prefer descriptive names over comments; add a comment only when the code
   cannot be made self-explanatory.
