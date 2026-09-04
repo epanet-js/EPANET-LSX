@@ -1,0 +1,14 @@
+diff --git a/src/input2.c b/src/input2.c
+index a959926..6088fe2 100644
+--- a/src/input2.c
++++ b/src/input2.c
+@@ -232,9 +232,6 @@ int readdata(Project *pr)
+             else
+             {
+                 sect = -1;
+-                parser->ErrTok = 0;
+-                errsum++;
+-                inperrmsg(pr, 299, sect, line);
+                 continue;
+             }
+         }

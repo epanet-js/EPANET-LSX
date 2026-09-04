@@ -33,10 +33,10 @@ IFS=$'\n' patches=($(sort <<<"${patches[*]}")); unset IFS
 cd "${EPANET_DIR}"
 for p in "${patches[@]}"; do
   name="$(basename "$p")"
-  if git apply --reverse --check "$p" >/dev/null 2>&1; then
-    echo "${name} already applied."
-  elif git apply --check "$p" >/dev/null 2>&1; then
+  if git apply --check "$p" >/dev/null 2>&1; then
     git apply "$p" && echo "${name} applied."
+  elif git apply --reverse --check "$p" >/dev/null 2>&1; then
+    echo "${name} already applied."
   else
     echo "ERROR: ${name} does not apply cleanly to ${EPANET_DIR}." >&2
     exit 1
