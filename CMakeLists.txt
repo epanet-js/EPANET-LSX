@@ -7,6 +7,10 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 
 set(EPANET_DIR ${CMAKE_SOURCE_DIR}/build/EPANET)
 
+# The extensions loader uses dlopen/dlsym (${CMAKE_DL_LIBS}; empty on Win32/macOS)
+# and pthread_once (Threads) to load sidecar extensions.
+find_package(Threads REQUIRED)
+
 file(GLOB_RECURSE EPANET_SOURCES CONFIGURE_DEPENDS ${EPANET_DIR}/src/*.c)
 list(FILTER EPANET_SOURCES EXCLUDE REGEX "/outfile/src/epanet_output\\.c$")
 file(GLOB LSX_SOURCES CONFIGURE_DEPENDS ${CMAKE_SOURCE_DIR}/src/*.c)
@@ -22,7 +26,7 @@ target_include_directories(epanet2 PRIVATE
     ${CMAKE_SOURCE_DIR}/src
     ${CMAKE_SOURCE_DIR}/vendor)
 
-target_link_libraries(epanet2 PRIVATE m)
+target_link_libraries(epanet2 PRIVATE m ${CMAKE_DL_LIBS} Threads::Threads)
 
 set_target_properties(epanet2 PROPERTIES
     POSITION_INDEPENDENT_CODE ON
@@ -51,12 +55,10 @@ if(MSVC)
     target_compile_options(runepanet PRIVATE -MT)
 endif()
 
-target_link_libraries(runepanet PRIVATE epanet2 m)
+target_link_libraries(runepanet PRIVATE epanet2 m ${CMAKE_DL_LIBS})
 
 add_library(enext_shim OBJECT ${CMAKE_SOURCE_DIR}/sdk/enext-shim.c)
-target_include_directories(enext_shim PRIVATE
-    ${CMAKE_SOURCE_DIR}/include
-    ${EPANET_DIR}/include)
+target_include_directories(enext_shim PRIVATE ${EPANET_DIR}/include)  # enext.h + epanet2_2.h
 target_compile_definitions(enext_shim PRIVATE ENEXT_PLUGIN_EXPORTS)
 set_target_properties(enext_shim PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
@@ -93,7 +95,7 @@ target_compile_options(epanet_lsx_test PRIVATE
     $<$<COMPILE_LANGUAGE:C>:-std=gnu99>
     ${SAN_COMPILE})
 set_target_properties(epanet_lsx_test PROPERTIES POSITION_INDEPENDENT_CODE ON)
-target_link_libraries(epanet_lsx_test PUBLIC m)
+target_link_libraries(epanet_lsx_test PUBLIC m ${CMAKE_DL_LIBS} Threads::Threads)
 
 file(GLOB_RECURSE TEST_FILES CONFIGURE_DEPENDS ${CMAKE_SOURCE_DIR}/tests/*.test.cpp)
 
