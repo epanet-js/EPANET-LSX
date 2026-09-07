@@ -58,3 +58,4 @@ dkms.conf
 *.dwo
 
 reference-code/
+.claude/

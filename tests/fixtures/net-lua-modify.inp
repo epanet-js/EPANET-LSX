@@ -1,0 +1,27 @@
+[TITLE]
+Small net whose Lua script rewrites a node elevation
+
+[JUNCTIONS]
+ J1  100
+ J2   90
+
+[RESERVOIRS]
+ R1  200
+
+[PIPES]
+ P1  R1  J1  1000  12  100  0  Open
+ P2  J1  J2  1000  12  100  0  Open
+
+[SCRIPT]
+node("J1").elevation = 150
+print("elevation of J1 is " .. node("J1").elevation)
+
+[COORDINATES]
+ J1  0  0
+ J2  1  0
+ R1  0  1
+
+[OPTIONS]
+ Units  LPS
+
+[END]
