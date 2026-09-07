@@ -1,0 +1,81 @@
+diff --git a/src/epanet.c b/src/epanet.c
+index 9ff507f..cd703ba 100644
+--- a/src/epanet.c
++++ b/src/epanet.c
+@@ -22,6 +22,7 @@
+ #include "funcs.h"
+ #include "text.h"
+ #include "enumstxt.h"
++#include "epanet-lsx.h"
+ 
+ #ifdef _WIN32
+ #define snprintf _snprintf
+@@ -211,8 +212,13 @@ int DLLEXPORT EN_open(EN_Project p, const char *inpFile, const char *rptFile,
+  */
+  {
+    writewin(p->viewprog, FMT100);
+-   return openproject(p, inpFile, rptFile, outFile, FALSE);
+- }     
++   int errcode = openproject(p, inpFile, rptFile, outFile, FALSE);
++   if (errcode == 0)
++   {
++      errcode = LSX_open(p, inpFile);
++   }
++   return errcode;
++ }
+ 
+ int DLLEXPORT EN_openX(EN_Project p, const char *inpFile,
+     const char *rptFile, const char *outFile)
+@@ -227,8 +233,13 @@ int DLLEXPORT EN_openX(EN_Project p, const char *inpFile,
+  */
+ {
+     writewin(p->viewprog, FMT100);
+-    return openproject(p, inpFile, rptFile, outFile, TRUE);
+-}    
++    int errcode = openproject(p, inpFile, rptFile, outFile, TRUE);
++    if (errcode == 0)
++    {
++        errcode = LSX_open(p, inpFile);
++    }
++    return errcode;
++}
+ 
+ int DLLEXPORT EN_gettitle(EN_Project p, char *line1, char *line2, char *line3)
+ /*----------------------------------------------------------------
+@@ -570,6 +581,12 @@ int DLLEXPORT EN_initH(EN_Project p, int initFlag)
+     // Initialize hydraulics solver
+     inithyd(p, fflag);
+     if (p->report.Statflag > 0) writeheader(p, STATHDR, 0);
++
++    if (!errcode && EN_getprivatedata(p) != NULL)
++    {
++        errcode = LSX_init(p);
++    }
++
+     return errcode;
+ }
+ 
+@@ -587,6 +604,7 @@ int DLLEXPORT EN_runH(EN_Project p, long *currentTime)
+     *currentTime = 0;
+     if (!p->hydraul.OpenHflag) return 103;
+     errcode = runhyd(p, currentTime);
++    if (!errcode && EN_getprivatedata(p) != NULL) errcode = LSX_run(p);
+     if (errcode) errmsg(p, errcode);
+     return errcode;
+ }
+@@ -605,6 +623,7 @@ int DLLEXPORT EN_nextH(EN_Project p, long *tStep)
+     *tStep = 0;
+     if (!p->hydraul.OpenHflag) return 103;
+     errcode = nexthyd(p, tStep);
++    if (!errcode && EN_getprivatedata(p) != NULL) errcode = LSX_next(p);
+     if (errcode) errmsg(p, errcode);
+     else if (p->outfile.Saveflag && *tStep == 0) p->outfile.SaveHflag = TRUE;
+     return errcode;
+@@ -622,6 +641,7 @@ int DLLEXPORT EN_closeH(EN_Project p)
+   if (!p->Openflag) return 102;
+   if (p->hydraul.OpenHflag)
+   {
++      LSX_close(p);
+       closeleakage(p);
+       closehyd(p);
+   }

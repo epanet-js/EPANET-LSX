@@ -32,13 +32,21 @@ IFS=$'\n' patches=($(sort <<<"${patches[*]}")); unset IFS
 
 for patch in "${patches[@]}"; do
   name="$(basename "${patch}")"
-  # Skip patches that are already applied so re-running is a no-op.
-  if git -C "${EPANET_DIR}" apply --reverse --check "${patch}" >/dev/null 2>&1; then
+  # Decide by a forward dry-run first: if the patch still applies it is not yet
+  # applied, so apply it. Only when it does NOT apply forward do we treat a
+  # clean reverse dry-run as "already applied". Testing reverse first gives a
+  # false positive for deletion-only patches (reverse-adding lines only checks
+  # surrounding context, not that the lines are absent), which would wrongly
+  # skip them.
+  if git -C "${EPANET_DIR}" apply --check "${patch}" >/dev/null 2>&1; then
+    echo "  -> Applying ${name}..."
+    git -C "${EPANET_DIR}" apply --whitespace=fix "${patch}"
+    git -C "${EPANET_DIR}" add .
+    git -C "${EPANET_DIR}" commit -m "LSX patch - ${patch}"
+  elif git -C "${EPANET_DIR}" apply --reverse --check "${patch}" >/dev/null 2>&1; then
     echo "  -> ${name} already applied, skipping."
-    continue
+  else
+    echo "ERROR: ${name} does not apply cleanly to ${EPANET_DIR}." >&2
+    exit 1
   fi
-  echo "  -> Applying ${name}..."
-  git -C "${EPANET_DIR}" apply --whitespace=fix "${patch}"
-  git -C "${EPANET_DIR}" add .
-  git -C "${EPANET_DIR}" commit -m "LSX patch - ${patch}"
 done
