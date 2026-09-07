@@ -12,12 +12,10 @@ jobs:
       fail-fast: false
       matrix:
         os:
-          # TEMPORARY: reduced to Windows only while debugging the patch step.
-          # Restore the full matrix once the Windows build is green.
-          # - ubuntu-latest
-          # - ubuntu-24.04-arm
-          # - macos-15-intel
-          # - macos-14
+          - ubuntu-latest
+          - ubuntu-24.04-arm
+          - macos-15-intel
+          - macos-14
           - windows-latest
     runs-on: ${{ matrix.os }}
     steps:
