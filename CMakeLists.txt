@@ -7,15 +7,10 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 
 set(EPANET_DIR ${CMAKE_SOURCE_DIR}/build/EPANET)
 
-# The extensions loader uses dlopen/dlsym (${CMAKE_DL_LIBS}; empty on Win32/macOS)
-# and pthread_once (Threads) to load sidecar extensions.
-find_package(Threads REQUIRED)
-
 file(GLOB_RECURSE EPANET_SOURCES CONFIGURE_DEPENDS ${EPANET_DIR}/src/*.c)
 list(FILTER EPANET_SOURCES EXCLUDE REGEX "/outfile/src/epanet_output\\.c$")
 file(GLOB LSX_SOURCES CONFIGURE_DEPENDS ${CMAKE_SOURCE_DIR}/src/*.c)
 
-# Library (libepanet2)
 add_library(epanet2 SHARED ${EPANET_SOURCES} ${LSX_SOURCES})
 
 target_include_directories(epanet2 PRIVATE
@@ -26,7 +21,7 @@ target_include_directories(epanet2 PRIVATE
     ${CMAKE_SOURCE_DIR}/src
     ${CMAKE_SOURCE_DIR}/vendor)
 
-target_link_libraries(epanet2 PRIVATE m ${CMAKE_DL_LIBS} Threads::Threads)
+target_link_libraries(epanet2 PRIVATE m ${CMAKE_DL_LIBS})
 
 set_target_properties(epanet2 PROPERTIES
     POSITION_INDEPENDENT_CODE ON
@@ -34,11 +29,8 @@ set_target_properties(epanet2 PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/build
 )
 
-# Command line executable (runepanet)
 add_executable(runepanet ${EPANET_DIR}/run/main.c)
-
 target_include_directories(runepanet PRIVATE ${EPANET_DIR}/include)
-
 set_target_properties(runepanet PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/build)
 
 if(APPLE)
@@ -57,24 +49,16 @@ endif()
 
 target_link_libraries(runepanet PRIVATE epanet2 m ${CMAKE_DL_LIBS})
 
-# Each test binary links the full EPANET engine + LSX sources directly
 enable_testing()
-
 set(CEST_DIR ${CMAKE_SOURCE_DIR}/vendor)   # vendored cest header (vendor/cest)
 
-# ASan/LSan on the test targets so create/destroy pair tests catch leaks.
 set(SAN_COMPILE -fsanitize=address)
 set(SAN_LINK -fsanitize=address)
 if(NOT CMAKE_SYSTEM_NAME MATCHES "Darwin")
     list(APPEND SAN_LINK -static-libasan)
 endif()
 
-# The engine + LSX C sources compiled once into a sanitized static library that
-# every test links against (same set as the shared library; the CLI main lives
-# in run/main.c, which is not part of these globs). Compiling them here instead
-# of per-test avoids rebuilding the whole engine for each test binary.
 set(TEST_LIB_SOURCES ${EPANET_SOURCES} ${LSX_SOURCES})
-
 add_library(epanet_lsx_test STATIC EXCLUDE_FROM_ALL ${TEST_LIB_SOURCES})
 target_include_directories(epanet_lsx_test PUBLIC
     ${CEST_DIR}                      # the 'cest' header
@@ -84,13 +68,12 @@ target_include_directories(epanet_lsx_test PUBLIC
     ${EPANET_DIR}/include            # EPANET toolkit headers
     ${EPANET_DIR}/src
     ${EPANET_DIR}/src/util)
-# The engine sources compile as C99; sanitizers match the test binaries.
 target_compile_options(epanet_lsx_test PRIVATE
     -g -O0
     $<$<COMPILE_LANGUAGE:C>:-std=gnu99>
     ${SAN_COMPILE})
 set_target_properties(epanet_lsx_test PROPERTIES POSITION_INDEPENDENT_CODE ON)
-target_link_libraries(epanet_lsx_test PUBLIC m ${CMAKE_DL_LIBS} Threads::Threads)
+target_link_libraries(epanet_lsx_test PUBLIC m ${CMAKE_DL_LIBS})
 
 file(GLOB_RECURSE TEST_FILES CONFIGURE_DEPENDS ${CMAKE_SOURCE_DIR}/tests/*.test.cpp)
 
