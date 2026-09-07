@@ -18,7 +18,7 @@ build: init
 
 # Build every *.test.cpp into a test_ binary, then run the suite.
 test: build
-	cmake --build $(CMAKE_DIR) --target build_tests
+	cmake --build $(CMAKE_DIR) -j8 --target build_tests
 	./scripts/run-tests.sh
 
 # Remove the build folder (EPANET sources, patch state, and build output).
