@@ -32,21 +32,26 @@ IFS=$'\n' patches=($(sort <<<"${patches[*]}")); unset IFS
 
 for patch in "${patches[@]}"; do
   name="$(basename "${patch}")"
-  # Decide by a forward dry-run first: if the patch still applies it is not yet
-  # applied, so apply it. Only when it does NOT apply forward do we treat a
-  # clean reverse dry-run as "already applied". Testing reverse first gives a
-  # false positive for deletion-only patches (reverse-adding lines only checks
-  # surrounding context, not that the lines are absent), which would wrongly
-  # skip them.
-  if git -C "${EPANET_DIR}" apply --check "${patch}" >/dev/null 2>&1; then
-    echo "  -> Applying ${name}..."
-    git -C "${EPANET_DIR}" apply --whitespace=fix "${patch}"
-    git -C "${EPANET_DIR}" add .
-    git -C "${EPANET_DIR}" commit -m "LSX patch - ${patch}"
-  elif git -C "${EPANET_DIR}" apply --reverse --check "${patch}" >/dev/null 2>&1; then
+  # Use the commit log as the source of truth for "already applied". Each patch
+  # is committed with a "LSX patch - <name>" marker, so a re-run skips patches
+  # whose marker is already present. This is robust where a patch-vs-tree check
+  # is not: once a later patch edits a region an earlier patch also touched
+  # (e.g. 0004 rewrites EN_runH that 0003 introduced), the earlier patch no
+  # longer applies forward or reverses cleanly, yet it is still applied.
+  # Substring match in bash rather than `git log | grep -q`: with `pipefail`,
+  # grep -q closing the pipe early makes git log exit with SIGPIPE, which would
+  # mark the whole pipeline as failed even on a match and re-apply the patch.
+  markers="$(git -C "${EPANET_DIR}" log --format=%s 2>/dev/null || true)"
+  if [[ "${markers}" == *"LSX patch - ${name}"* ]]; then
     echo "  -> ${name} already applied, skipping."
-  else
+    continue
+  fi
+
+  echo "  -> Applying ${name}..."
+  if ! git -C "${EPANET_DIR}" apply "${patch}"; then
     echo "ERROR: ${name} does not apply cleanly to ${EPANET_DIR}." >&2
     exit 1
   fi
+  git -C "${EPANET_DIR}" add .
+  git -C "${EPANET_DIR}" commit -qm "LSX patch - ${name}"
 done
