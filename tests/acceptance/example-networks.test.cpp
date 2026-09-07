@@ -11,10 +11,6 @@ extern "C" {
 #include <epanet2_2.h>
 }
 
-#ifndef FIXTURES_DIR
-#define FIXTURES_DIR "."
-#endif
-
 static std::string net(const char *name) {
   return std::string(FIXTURES_DIR) + "/real-networks/" + name;
 }

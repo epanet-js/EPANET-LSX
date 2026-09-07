@@ -7,10 +7,6 @@ extern "C" {
 #include <epanet2_2.h>
 }
 
-#ifndef FIXTURES_DIR
-#define FIXTURES_DIR "."
-#endif
-
 static const char *kReportSink = "/dev/null";
 
 static std::string fixture(const char *name) {
