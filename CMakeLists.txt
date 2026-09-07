@@ -57,11 +57,6 @@ endif()
 
 target_link_libraries(runepanet PRIVATE epanet2 m ${CMAKE_DL_LIBS})
 
-add_library(enext_shim OBJECT ${CMAKE_SOURCE_DIR}/sdk/enext-shim.c)
-target_include_directories(enext_shim PRIVATE ${EPANET_DIR}/include)  # enext.h + epanet2_2.h
-target_compile_definitions(enext_shim PRIVATE ENEXT_PLUGIN_EXPORTS)
-set_target_properties(enext_shim PROPERTIES POSITION_INDEPENDENT_CODE ON)
-
 # Each test binary links the full EPANET engine + LSX sources directly
 enable_testing()
 
