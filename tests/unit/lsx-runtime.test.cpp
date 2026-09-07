@@ -1,39 +1,15 @@
 #include <cest>
 
-#include <cstdlib>
-#include <cstring>
 #include <string>
 
+#include "test-helpers.hpp"
+
 extern "C" {
-#include <epanet2_2.h>
 #include <lsx-errors.h>
 #include <lsx-runtime.h>
 }
 
-static char *dupScript(const char *s) {
-  size_t n = std::strlen(s) + 1;
-  char *out = (char *)std::malloc(n);
-  std::memcpy(out, s, n);
-  return out;
-}
-
-// A one-junction project built entirely through the public toolkit, enough for
-// the bindings to look up and read/write a node without a hydraulic solve.
-static EN_Project makeProject() {
-  EN_Project p = nullptr;
-  EN_createproject(&p);
-  EN_init(p, "/dev/null", "", EN_GPM, EN_HW);
-  int index = 0;
-  EN_addnode(p, "J1", EN_JUNCTION, &index);
-  EN_setnodevalue(p, index, EN_ELEVATION, 100.0);
-  return p;
-}
-
-static double elevationOf(EN_Project p) {
-  double value = 0.0;
-  EN_getnodevalue(p, 1, EN_ELEVATION, &value);
-  return value;
-}
+using namespace TestHelpers;
 
 describe("LsxRuntime", []() {
   it("frees a NULL runtime harmlessly", [&]() { LsxRuntime_Free(nullptr); });
@@ -94,7 +70,7 @@ describe("LsxRuntime", []() {
 
     LsxRuntime_SetScript(rt, dupScript("node('J1').elevation = node('J1').elevation + 10"));
     expect(LsxRuntime_Parse(rt)).toBe(LSX_OK);
-    expect((int)elevationOf(p)).toBe(110);  // load-time evaluation applied once
+    expect((int)elevationOf(p)).toBe(110);
 
     int changed = 0;
     expect(LsxRuntime_RunIteration(rt, &changed)).toBe(LSX_OK);

@@ -100,6 +100,7 @@ foreach(TEST_FILE ${TEST_FILES})
     get_filename_component(FILE_NAME ${TEST_FILE} NAME_WE)
     set(EXEC_NAME test_${FILE_NAME})
     add_executable(${EXEC_NAME} EXCLUDE_FROM_ALL ${TEST_FILE})
+    target_include_directories(${EXEC_NAME} PRIVATE ${CMAKE_SOURCE_DIR}/tests/helpers)
     # .test.cpp compiles as C++20; sanitizers match the shared static library.
     target_compile_options(${EXEC_NAME} PRIVATE
         -g -O0

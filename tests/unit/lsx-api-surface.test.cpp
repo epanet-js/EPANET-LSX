@@ -13,8 +13,6 @@ extern "C" {
 #include <lsx-runtime.h>
 }
 
-// -- helpers ----------------------------------------------------------------
-
 static char *dupScript(const std::string &s) {
   char *out = (char *)std::malloc(s.size() + 1);
   std::memcpy(out, s.c_str(), s.size() + 1);
@@ -31,8 +29,6 @@ static bool near(double a, double b) {
   return std::fabs(a - b) <= 1.0e-3 * (1.0 + std::fabs(b));
 }
 
-// A network holding one of every element the bindings can address, built
-// entirely through the public toolkit. No solve is needed to read/write inputs.
 static EN_Project makeNetwork() {
   EN_Project p = nullptr;
   EN_createproject(&p);
@@ -69,9 +65,6 @@ static int linkIndex(EN_Project p, const char *id) {
   return i;
 }
 
-// Round-trips one property both ways: write in Lua and read back in C (proves
-// the write targets the right EN_ code), then write in C and assert in Lua
-// (proves the read maps to the same code).
 static void roundTripNode(const char *id, const char *prop, int code,
                           double value) {
   {
@@ -169,8 +162,6 @@ static void roundTripTime(const char *prop, int code, long value) {
   }
 }
 
-// Options are read only through the binding, so validate the get path: set via
-// C, read via Lua.
 static void readOption(const char *prop, int code, double value) {
   EN_Project p = makeNetwork();
   LsxRuntime *rt = LsxRuntime_New(p);
@@ -196,8 +187,6 @@ static void expectReadOnly(const std::string &lvalue) {
   LsxRuntime_Free(rt);
   EN_deleteproject(p);
 }
-
-// -- parameter tables -------------------------------------------------------
 
 struct Prop {
   const char *id;
@@ -277,8 +266,6 @@ static const std::vector<std::string> kReadOnly = {
     "link('P1').flow",     "link('P1').velocity", "link('P1').headloss",
     "options().trials",    "options().accuracy",  "times().periods",
 };
-
-// -- tests ------------------------------------------------------------------
 
 describe("LSX API surface", []() {
   for (const Prop c : kNodeProps) {

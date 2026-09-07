@@ -1,51 +1,17 @@
 #include <cest>
 
-#include <cstdlib>
-#include <cstring>
 #include <string>
 
+#include "test-helpers.hpp"
+
 extern "C" {
-#include <epanet2_2.h>
 #include <lsx-errors.h>
 #include <lsx-events.h>
 #include <lsx-runtime.h>
 }
 
-static char *dupScript(const std::string &s) {
-  char *out = (char *)std::malloc(s.size() + 1);
-  std::memcpy(out, s.c_str(), s.size() + 1);
-  return out;
-}
+using namespace TestHelpers;
 
-static void captureLine(void *userData, void *projectHandle, const char *line) {
-  (void)projectHandle;
-  std::string *out = static_cast<std::string *>(userData);
-  *out += line;
-  *out += "\n";
-}
-
-static EN_Project makeProject(std::string *capture = nullptr) {
-  EN_Project p = nullptr;
-  EN_createproject(&p);
-  EN_init(p, "/dev/null", "", EN_GPM, EN_HW);
-  int index = 0;
-  EN_addnode(p, "J1", EN_JUNCTION, &index);
-  EN_setnodevalue(p, index, EN_ELEVATION, 100.0);
-  if (capture != nullptr) {
-    EN_setreportcallback(p, captureLine);
-    EN_setreportcallbackuserdata(p, capture);
-  }
-  return p;
-}
-
-static double elevation(EN_Project p) {
-  double value = 0.0;
-  EN_getnodevalue(p, 1, EN_ELEVATION, &value);
-  return value;
-}
-
-// Each handler stamps a distinct elevation, so the value after a dispatch tells
-// which handler actually fired.
 static const char *kHandlers =
     "function on_open() node('J1').elevation = 1 end\n"
     "function on_close() node('J1').elevation = 2 end\n"
@@ -70,7 +36,7 @@ describe("LsxEvents", []() {
           expect(LsxRuntime_Parse(rt)).toBe(LSX_OK);
 
           expect(LsxEvents_Dispatch(rt, m.event, nullptr)).toBe(LSX_OK);
-          expect((int)elevation(p)).toBe(m.marker);
+          expect((int)elevationOf(p)).toBe(m.marker);
 
           LsxRuntime_Free(rt);
           EN_deleteproject(p);
@@ -86,7 +52,7 @@ describe("LsxEvents", []() {
     int changed = 7;
     expect(LsxEvents_Dispatch(rt, LSX_EVENT_OPEN, &changed)).toBe(LSX_OK);
     expect(changed).toBe(0);
-    expect((int)elevation(p)).toBe(100);
+    expect((int)elevationOf(p)).toBe(100);
 
     LsxRuntime_Free(rt);
     EN_deleteproject(p);
@@ -145,11 +111,11 @@ describe("LsxEvents", []() {
     expect(LsxRuntime_Parse(rt)).toBe(LSX_OK);
 
     expect(LsxEvents_Dispatch(rt, LSX_EVENT_OPEN, nullptr)).toBe(LSX_OK);
-    expect(report).toEqual("hi\n");  // untimed: no timestamp prefix
+    expect(report).toEqual("hi\n");
 
     report.clear();
     expect(LsxEvents_Dispatch(rt, LSX_EVENT_HYDRAULIC_STEP, nullptr)).toBe(LSX_OK);
-    expect(report).toEqual("0:00:00: hi\n");  // timed: elapsed-time prefix
+    expect(report).toEqual("0:00:00: hi\n");
 
     LsxRuntime_Free(rt);
     EN_deleteproject(p);
