@@ -1,0 +1,160 @@
+;MADE BY EPANET-JS
+[JUNCTIONS]
+;Id	Elevation
+J138	0
+J126	19.2
+
+[RESERVOIRS]
+;Id	Head	Pattern
+R1	20
+
+[TANKS]
+;Id	Elevation	InitLevel	MinLevel	MaxLevel	Diameter	MinVol
+
+[PIPES]
+;Id	Start	End	Length	Diameter	Roughness	MinorLoss	Status
+P1	J138	J126	200	100	100
+
+[PUMPS]
+;Id	Start	End	Properties
+PU2	R1	J138	HEAD PU2	SPEED 1
+
+[VALVES]
+;Id	Start	End	Diameter	Setting	MinorLoss
+
+[DEMANDS]
+;Id	Demand	Pattern	Category
+J126	1	DAILY
+
+[STATUS]
+;Id	Status
+PU2	Open
+
+[CURVES]
+;Id	X	Y
+;PUMP:
+PU2	1	50
+
+[PATTERNS]
+;Id	Multiplier
+constant	1
+DAILY	0.4	0.8	1.2	1.6	1	0.6
+
+[TIMES]
+Duration	24
+Hydraulic Timestep	1
+Report Timestep	1
+Pattern Timestep	4
+
+[REPORT]
+Status	FULL
+Summary	No
+Page	0
+
+[OPTIONS]
+Quality	NONE
+Unbalanced	CONTINUE 10
+Accuracy	0.001
+Units	LPS
+Headloss	H-W
+Demand Multiplier	1
+Demand Model	DDA
+Emitter Exponent	0.5
+Pattern	constant
+
+[BACKDROP]
+Units	DEGREES
+
+[COORDINATES]
+;Node	X-coord	Y-coord
+J138	-4.368	55.9061
+J126	-4.3648	55.9058
+R1	-4.372	55.9052
+
+[VERTICES]
+;link	X-coord	Y-coord
+
+[SCRIPT]
+-- Variable speed pumps holding target pressures at control nodes.
+-- Each pump runs an independent secant search on its speed setting.
+-- To add a pump, add one line to the PUMPS list -- each entry is
+-- { pump id, control node id, target pressure }. Per-pump secant
+-- memory is kept in vsp_state keyed by pump id, so any number of
+-- pumps can run side by side without interfering.
+
+-- === user settings ==============================================
+PUMPS = {
+    { "PU2", "J126", 25.0 },
+    -- { "PU3", "J40",  55.0 },
+}
+PRESSURE_TOL = 0.01     -- acceptable pressure error at the node
+SPEED_TOL    = 0.0001   -- smallest speed change worth writing
+MAX_SPEED    = 2.0      -- speed setting ceiling
+-- ================================================================
+
+vsp_state = {}          -- per-pump { last_speed, last_pressure }
+
+function vspHold(pump_id, node_id, target)
+    -- First call for this pump: start from its current speed
+    local st = vsp_state[pump_id]
+    if st == nil then
+        st = { last_speed = link(pump_id).setting, last_pressure = 0.0 }
+        vsp_state[pump_id] = st
+    end
+
+    local pump     = link(pump_id)
+    local speed    = pump.setting
+    local pressure = node(node_id).pressure
+
+    if math.abs(pressure - target) <= PRESSURE_TOL then
+        return
+    end
+
+    local new_speed
+    -- A secant step needs two distinct points to draw a line
+    -- through, so until there are two, step with the naive
+    -- speed/pressure ratio
+    if math.abs(st.last_speed - speed) < SPEED_TOL
+       or math.abs(pressure - st.last_pressure) < 1e-6 then
+        new_speed = speed * (target / pressure)
+    else
+        new_speed = speed + (st.last_speed - speed)
+                          * (pressure - target)
+                          / (pressure - st.last_pressure)
+    end
+
+    if new_speed > MAX_SPEED then new_speed = MAX_SPEED end
+    if new_speed < 0 then new_speed = 0 end
+
+    if math.abs(new_speed - speed) > SPEED_TOL then
+        pump.setting = new_speed
+        st.last_speed, st.last_pressure = speed, pressure
+    end
+end
+
+-- End-of-step bookkeeping: log, and reset the secant pair so the
+-- next time step starts fresh (its pressure change comes from the
+-- new demands, not from speed, and would poison the secant slope)
+function vspRefresh(pump_id, node_id)
+    local st = vsp_state[pump_id]
+    if st then
+        st.last_speed    = link(pump_id).setting
+        st.last_pressure = node(node_id).pressure
+    end
+    print(string.format("Step report: %s speed=%.3f  %s pressure=%.3f",
+          pump_id, link(pump_id).setting, node_id, node(node_id).pressure))
+end
+
+function on_hydraulic_step()
+    for _, p in ipairs(PUMPS) do
+        vspHold(p[1], p[2], p[3])
+    end
+end
+
+function on_hydraulics_solved()
+    for _, p in ipairs(PUMPS) do
+        vspRefresh(p[1], p[2])
+    end
+end
+
+[END]

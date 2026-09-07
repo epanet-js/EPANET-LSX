@@ -1,0 +1,178 @@
+;MADE BY EPANET-JS
+[JUNCTIONS]
+;Id	Elevation
+J6	64.3
+J4	50.9
+J2	66.3
+J1	27.1
+J3	59.9
+J5	27.1
+J7	59.9
+J8	50.9
+
+[RESERVOIRS]
+;Id	Head	Pattern
+R1	100
+R2	100
+
+[TANKS]
+;Id	Elevation	InitLevel	MinLevel	MaxLevel	Diameter	MinVol
+
+[PIPES]
+;Id	Start	End	Length	Diameter	Roughness	MinorLoss	Status
+P2_2	J7	J8	97.22	300	130
+P2	R2	J6	118.43	300	130
+P1_2	J3	J4	90.41	300	130
+P1	R1	J2	111.29	300	130
+P1_3	J4	J1	582.94	100	120
+P2_3	J8	J5	590.38	100	120
+
+[PUMPS]
+;Id	Start	End	Properties
+
+[VALVES]
+;Id	Start	End	Diameter	Setting	MinorLoss
+V1	J2	J3	300	PRV	10	0
+V2	J6	J7	300	PRV	20	0
+
+[DEMANDS]
+;Id	Demand	Pattern	Category
+J1	6	DMAFlow
+J5	6	DMAFlow
+
+[STATUS]
+;Id	Status
+
+[CURVES]
+;Id	X	Y
+
+[PATTERNS]
+;Id	Multiplier
+constant	1
+DMAFlow	0.2774	0.2757	0.2468	0.2451	0.2229	0.2196	0.194	0.2281
+DMAFlow	0.2332	0.2672	0.2705	0.1431	0.1346	0.177	0.2552	0.194
+DMAFlow	0.1652	0.1839	0.3437	0.3879	0.3063	0.5256	0.6208	0.7162
+DMAFlow	0.8453	1.0103	1.2755	1.1225	1.387	1.5535	1.6831	1.6234
+DMAFlow	1.668	1.7004	1.6819	1.58	1.7382	1.6344	1.4916	1.4235
+DMAFlow	1.3862	1.5715	1.5256	1.3776	1.4049	1.4407	1.1533	1.1992
+DMAFlow	1.177	1.3233	1.2076	1.1413	1.1805	1.0665	1.1481	1.0428
+DMAFlow	1.0122	1.0428	0.9084	1.0581	1.0598	1.2009	1.1669	1.2093
+DMAFlow	1.3453	1.4082	1.444	1.5698	1.4866	1.4377	1.44	1.4592
+DMAFlow	1.492	1.5361	1.4936	1.4577	1.2858	1.4601	1.3441	1.4163
+DMAFlow	1.4278	1.2119	1.1387	0.9431	1.0367	1.1098	1.0656	0.8463
+DMAFlow	0.8887	0.7884	0.7561	0.6456	0.4943	0.4704	0.4348	0.4075
+
+[TIMES]
+Duration	24
+Hydraulic Timestep	0:15
+Report Timestep	0:15
+Pattern Timestep	0:15
+
+[REPORT]
+Status	FULL
+Summary	No
+Page	0
+
+[OPTIONS]
+Quality	NONE
+Unbalanced	STOP
+Accuracy	0.001
+Units	LPS
+Headloss	H-W
+Demand Multiplier	1
+Demand Model	DDA
+Emitter Exponent	0.5
+Trials	40
+Pattern	constant
+
+[BACKDROP]
+Units	DEGREES
+
+[COORDINATES]
+;Node	X-coord	Y-coord
+J6	-4.382445	55.915625
+J4	-4.379948	55.91548
+J2	-4.382133	55.916141
+J1	-4.371458	55.913279
+J3	-4.381225	55.915866
+J5	-4.371627	55.912823
+J7	-4.381643	55.915417
+J8	-4.380227	55.91505
+R1	-4.383705	55.916616
+R2	-4.38417	55.916072
+
+[VERTICES]
+;link	X-coord	Y-coord
+
+[SCRIPT]
+-- Flow-modulating PRV example
+--
+-- Adjusts the PRV downstream pressure setpoint based on the current
+-- flow rate through the valve. A lookup table defines the
+-- flow-to-pressure relationship, with linear interpolation between
+-- entries and clamping to the nearest boundary outside the table.
+--
+-- The table uses four points with different slopes to show that the
+-- interpolation rate varies between segments:
+--
+--   Flow (LPS)   Pressure (m)   Slope
+--   ----------   ------------   -----
+--        3.0          20         --
+--        6.0          25         1.67 m per LPS
+--        8.0          29         2.0 m per LPS
+--       10.0          32         1.5 m per LPS
+--
+-- Observed flow range through V1 is roughly 2.5 - 9.6 LPS over the
+-- 24-hour demand cycle. The lower table bound (3.0) sits just inside
+-- that range, so low-flow clamping shows overnight; the upper bound
+-- (10.0) is above the observed peak, so the top segment interpolates
+-- but never clamps.
+--
+-- The modulation runs in on_hydraulic_step: if it changes the
+-- setting, the step is re-solved and the handler runs again, until
+-- the setting matches the interpolated target and the write guard
+-- stops making changes. on_hydraulics_solved prints one summary
+-- line per settled step.
+
+-- Lookup table: parallel arrays of flow and target pressure.
+-- Globals rather than locals so the handlers can see them.
+flows     = { 3.0,  6.0,  8.0,  10.0 }
+pressures = { 20.0, 25.0, 29.0, 32.0 }
+
+-- Linear interpolation with clamping at the table boundaries
+function interpolate(q, qs, ps)
+    if q <= qs[1]   then return ps[1]   end
+    if q >= qs[#qs] then return ps[#qs] end
+    for i = 1, #qs - 1 do
+        if q <= qs[i + 1] then
+            local frac = (q - qs[i]) / (qs[i + 1] - qs[i])
+            return ps[i] + frac * (ps[i + 1] - ps[i])
+        end
+    end
+    return ps[#ps]
+end
+
+function on_hydraulic_step()
+    local v1     = link("V1")
+    local flow   = v1.flow
+    local target = interpolate(flow, flows, pressures)
+
+    -- Only update if the setting differs meaningfully: once the
+    -- setting matches the target, no write means no re-solve.
+    if math.abs(v1.setting - target) > 0.01 then
+        print(string.format(
+            "  Modulating: flow=%.2f LPS -> target pressure=%.2f m (was %.2f m)",
+            flow, target, v1.setting))
+        v1.setting = target
+    end
+end
+
+function on_hydraulics_solved()
+    local v1   = link("V1")
+    local j113 = node("J3")
+    print(string.format(
+        "  Step: V1 flow=%.2f LPS | PRV setting=%.2f m | J113 pressure=%.2f m",
+        v1.flow, v1.setting, j113.pressure))
+end
+
+[END]
