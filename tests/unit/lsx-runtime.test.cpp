@@ -22,7 +22,7 @@ static char *dupScript(const char *s) {
 static EN_Project makeProject() {
   EN_Project p = nullptr;
   EN_createproject(&p);
-  EN_init(p, "", "", EN_GPM, EN_HW);
+  EN_init(p, "/dev/null", "", EN_GPM, EN_HW);
   int index = 0;
   EN_addnode(p, "J1", EN_JUNCTION, &index);
   EN_setnodevalue(p, index, EN_ELEVATION, 100.0);
