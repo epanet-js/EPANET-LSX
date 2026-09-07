@@ -30,15 +30,9 @@ fi
 # Apply in sorted order (0001..., 0002..., ...).
 IFS=$'\n' patches=($(sort <<<"${patches[*]}")); unset IFS
 
-cd "${EPANET_DIR}"
-for p in "${patches[@]}"; do
-  name="$(basename "$p")"
-  if git apply --check "$p" >/dev/null 2>&1; then
-    git apply "$p" && echo "${name} applied."
-  elif git apply --reverse --check "$p" >/dev/null 2>&1; then
-    echo "${name} already applied."
-  else
-    echo "ERROR: ${name} does not apply cleanly to ${EPANET_DIR}." >&2
-    exit 1
-  fi
+for patch in "${patches[@]}"; do
+  echo "  -> Applying $(basename ${patch})..."
+  git -C "${EPANET_DIR}" apply --whitespace=fix "${patch}"
+  git -C "${EPANET_DIR}" add .
+  git -C "${EPANET_DIR}" commit -m "LSX patch - ${patch}"
 done
