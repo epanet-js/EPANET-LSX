@@ -4,6 +4,8 @@
 #include <cstring>
 #include <string>
 
+#include "null-device.hpp"
+
 extern "C" {
 #include <epanet2_2.h>
 }
@@ -26,7 +28,7 @@ inline void captureLine(void *userData, void *projectHandle, const char *line) {
 inline EN_Project makeProject(std::string *capture = nullptr) {
   EN_Project p = nullptr;
   EN_createproject(&p);
-  EN_init(p, "/dev/null", "", EN_GPM, EN_HW);
+  EN_init(p, LSX_NULL_DEVICE, "", EN_GPM, EN_HW);
   int index = 0;
   EN_addnode(p, "J1", EN_JUNCTION, &index);
   EN_setnodevalue(p, index, EN_ELEVATION, 100.0);

@@ -1,0 +1,220 @@
+name: CI
+
+on: [push]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Test (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          # TEMPORARY: reduced to Windows only while debugging the patch step.
+          # Restore the full matrix once the Windows build is green.
+          # - ubuntu-latest
+          # - ubuntu-24.04-arm
+          # - macos-15-intel
+          # - macos-14
+          - windows-latest
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache EPANET sources & cest-runner
+        uses: actions/cache@v4
+        with:
+          path: |
+            build/EPANET
+            build/cest
+          key: ${{ runner.os }}-${{ runner.arch }}-epanet-v2-${{ hashFiles('patches/**', 'scripts/init.sh') }}
+
+      - name: Setup MSYS2 (Windows)
+        if: runner.os == 'Windows'
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          cache: true
+          install: >-
+            git make curl
+            mingw-w64-x86_64-gcc
+            mingw-w64-x86_64-cmake
+
+      - name: Configure git identity (Unix)
+        if: runner.os != 'Windows'
+        run: |
+          git config --global user.name "epanet-lsx-ci"
+          git config --global user.email "ci@epanet-lsx.invalid"
+
+      - name: Configure git (Windows)
+        if: runner.os == 'Windows'
+        shell: msys2 {0}
+        run: |
+          git config --global user.name "epanet-lsx-ci"
+          git config --global user.email "ci@epanet-lsx.invalid"
+          # Keep the cloned EPANET tree LF so the (LF) patches apply cleanly.
+          git config --global core.autocrlf false
+          git config --global core.eol lf
+
+      - name: Build & test (Unix)
+        if: runner.os != 'Windows'
+        run: make test
+
+      - name: Build & test (Windows)
+        if: runner.os == 'Windows'
+        shell: msys2 {0}
+        run: make test
+
+  release-build:
+    name: Build release (${{ matrix.artifact }})
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: test
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            artifact: linux-x64
+          - os: ubuntu-latest
+            artifact: linux-x86
+            m32: true
+          - os: ubuntu-24.04-arm
+            artifact: linux-aarch64
+          - os: macos-15-intel
+            artifact: macos-x64
+          - os: macos-14
+            artifact: macos-aarch64
+          - os: windows-latest
+            artifact: windows-x64
+            msystem: MINGW64
+            mingw: x86_64
+          - os: windows-latest
+            artifact: windows-x86
+            msystem: MINGW32
+            mingw: i686
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache EPANET sources & cest-runner
+        uses: actions/cache@v4
+        with:
+          path: |
+            build/EPANET
+            build/cest
+          key: ${{ runner.os }}-${{ runner.arch }}-epanet-v2-${{ hashFiles('patches/**', 'scripts/init.sh') }}
+
+      - name: Setup MSYS2 (Windows)
+        if: runner.os == 'Windows'
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: ${{ matrix.msystem }}
+          cache: true
+          install: >-
+            git make curl
+            mingw-w64-${{ matrix.mingw }}-gcc
+            mingw-w64-${{ matrix.mingw }}-cmake
+
+      - name: Configure git identity (Unix)
+        if: runner.os != 'Windows'
+        run: |
+          git config --global user.name "epanet-lsx-ci"
+          git config --global user.email "ci@epanet-lsx.invalid"
+
+      - name: Configure git (Windows)
+        if: runner.os == 'Windows'
+        shell: msys2 {0}
+        run: |
+          git config --global user.name "epanet-lsx-ci"
+          git config --global user.email "ci@epanet-lsx.invalid"
+          # Keep the cloned EPANET tree LF so the (LF) patches apply cleanly.
+          git config --global core.autocrlf false
+          git config --global core.eol lf
+
+      - name: Install multilib (Linux x86)
+        if: matrix.m32
+        run: |
+          sudo dpkg --add-architecture i386
+          sudo apt-get update
+          sudo apt-get install -y g++-multilib gcc-multilib
+
+      - name: Build library (Unix)
+        if: runner.os != 'Windows' && !matrix.m32
+        run: make
+
+      - name: Build library (Linux x86)
+        if: matrix.m32
+        run: make
+        env:
+          CFLAGS: -m32
+          CXXFLAGS: -m32
+
+      - name: Build library (Windows)
+        if: runner.os == 'Windows'
+        shell: msys2 {0}
+        run: make
+
+      - name: Package (Unix)
+        if: runner.os != 'Windows'
+        run: |
+          staging="epanet-lsx-${{ matrix.artifact }}"
+          mkdir -p "$staging"
+          cp build/runepanet "$staging"/ 2>/dev/null || true
+          cp build/libepanet2.* "$staging"/ 2>/dev/null || true
+          tar -czf "${staging}.tar.gz" "$staging"
+
+      - name: Package (Windows)
+        if: runner.os == 'Windows'
+        shell: msys2 {0}
+        run: |
+          staging="epanet-lsx-${{ matrix.artifact }}"
+          mkdir -p "$staging"
+          cp build/runepanet.exe "$staging"/ 2>/dev/null || true
+          cp build/*.dll "$staging"/ 2>/dev/null || true
+          tar -czf "${staging}.tar.gz" "$staging"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: epanet-lsx-${{ matrix.artifact }}
+          path: epanet-lsx-${{ matrix.artifact }}.tar.gz
+
+  release:
+    name: Publish release
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: release-build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release-artifacts
+          merge-multiple: true
+
+      - name: Generate changelog
+        run: |
+          CURRENT_TAG="${GITHUB_REF#refs/tags/}"
+          PREVIOUS_TAG=$(git tag --sort=-creatordate | grep -A1 "^${CURRENT_TAG}$" | tail -1)
+          if [ -z "$PREVIOUS_TAG" ] || [ "$PREVIOUS_TAG" = "$CURRENT_TAG" ]; then
+            CHANGELOG=$(git log --pretty=format:"- %s" "$CURRENT_TAG")
+          else
+            CHANGELOG=$(git log --pretty=format:"- %s" "${PREVIOUS_TAG}..${CURRENT_TAG}")
+          fi
+          echo "CHANGELOG<<EOF" >> $GITHUB_ENV
+          echo "$CHANGELOG" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: ${{ github.ref_name }}
+          body: ${{ env.CHANGELOG }}
+          files: release-artifacts/*

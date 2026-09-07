@@ -112,6 +112,7 @@ if [ -n "${CEST_ARCH}" ]; then
     cest-runner-linux-x86)     CEST_SHA="6026d144234a756ffdbd37f9000ed937282816a21e8a9fa224e20ef1edd436af" ;;
     cest-runner-macos-aarch64) CEST_SHA="0fca1326fd7382c3186e8719825cf04c7d020e46a57588d8ca80bf8d1cce53c6" ;;
     cest-runner-macos-x64)     CEST_SHA="90b2d1304036788ed01780c9022d11006ae861470345efb087990dc250816c18" ;;
+    cest-runner-windows-x64.exe) CEST_SHA="2270e9ab4adcec3dac82f63d35c26bb188725d903a6b3632e36be29820719ee5" ;;
     *)                         CEST_ASSET="" ;;  # no checksum listed -> treat as unavailable
   esac
 fi

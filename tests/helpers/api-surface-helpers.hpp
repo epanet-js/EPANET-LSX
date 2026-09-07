@@ -28,7 +28,7 @@ inline bool near(double a, double b) {
 inline EN_Project makeNetwork() {
   EN_Project p = nullptr;
   EN_createproject(&p);
-  EN_init(p, "/dev/null", "", EN_GPM, EN_HW);
+  EN_init(p, LSX_NULL_DEVICE, "", EN_GPM, EN_HW);
 
   int i = 0;
   EN_addnode(p, "R1", EN_RESERVOIR, &i);

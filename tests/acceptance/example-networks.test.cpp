@@ -7,6 +7,8 @@
 #include <string>
 #include <vector>
 
+#include "null-device.hpp"
+
 extern "C" {
 #include <epanet2_2.h>
 }
@@ -19,7 +21,7 @@ static void driveHydraulics(const char *file,
                             const std::function<void(EN_Project, long)> &onStep) {
   EN_Project p = nullptr;
   EN_createproject(&p);
-  expect(EN_open(p, net(file).c_str(), "/dev/null", "")).toBeLessThan(100);
+  expect(EN_open(p, net(file).c_str(), LSX_NULL_DEVICE, "")).toBeLessThan(100);
   expect(EN_openH(p)).toBeLessThan(100);
   expect(EN_initH(p, EN_NOSAVE)).toBeLessThan(100);
 

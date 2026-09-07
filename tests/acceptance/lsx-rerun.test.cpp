@@ -2,6 +2,8 @@
 
 #include <string>
 
+#include "null-device.hpp"
+
 extern "C" {
 #include <epanet-lsx.h>
 #include <epanet2_2.h>
@@ -23,7 +25,7 @@ describe("LSX hydraulic re-run loop", []() {
   it("re-solves and re-runs the script up to MAX_LSX_ITERATIONS times", [&]() {
     EN_Project p = nullptr;
     EN_createproject(&p);
-    expect(EN_open(p, fixture("net-lua-rerun-cap.inp").c_str(), "/dev/null", ""))
+    expect(EN_open(p, fixture("net-lua-rerun-cap.inp").c_str(), LSX_NULL_DEVICE, ""))
         .toBe(0);
     expect(EN_solveH(p)).toBeLessThan(100);
 
@@ -36,7 +38,7 @@ describe("LSX hydraulic re-run loop", []() {
   it("stops re-running once the script reports no change", [&]() {
     EN_Project p = nullptr;
     EN_createproject(&p);
-    expect(EN_open(p, fixture("net-lua-rerun-converge.inp").c_str(), "/dev/null",
+    expect(EN_open(p, fixture("net-lua-rerun-converge.inp").c_str(), LSX_NULL_DEVICE,
                    ""))
         .toBe(0);
     expect(EN_solveH(p)).toBeLessThan(100);

@@ -1,0 +1,6 @@
+# The patches are applied with `git apply` to a freshly cloned EPANET tree
+# (which is LF), and the scripts run under MSYS2 bash on Windows. Force LF on
+# checkout for both so they keep working on Windows, where git would otherwise
+# convert them to CRLF (breaking `git apply` and the shebang lines).
+*.patch text eol=lf
+*.sh    text eol=lf

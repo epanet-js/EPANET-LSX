@@ -2,12 +2,14 @@
 
 #include <string>
 
+#include "null-device.hpp"
+
 extern "C" {
 #include <epanet-lsx.h>
 #include <epanet2_2.h>
 }
 
-static const char *kReportSink = "/dev/null";
+static const char *kReportSink = LSX_NULL_DEVICE;
 
 static std::string fixture(const char *name) {
   return std::string(FIXTURES_DIR) + "/" + name;

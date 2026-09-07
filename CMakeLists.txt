@@ -52,10 +52,15 @@ target_link_libraries(runepanet PRIVATE epanet2 m ${CMAKE_DL_LIBS})
 enable_testing()
 set(CEST_DIR ${CMAKE_SOURCE_DIR}/vendor)   # vendored cest header (vendor/cest)
 
-set(SAN_COMPILE -fsanitize=address)
-set(SAN_LINK -fsanitize=address)
-if(NOT CMAKE_SYSTEM_NAME MATCHES "Darwin")
-    list(APPEND SAN_LINK -static-libasan)
+if(WIN32)
+    set(SAN_COMPILE "")
+    set(SAN_LINK "")
+else()
+    set(SAN_COMPILE -fsanitize=address)
+    set(SAN_LINK -fsanitize=address)
+    if(NOT CMAKE_SYSTEM_NAME MATCHES "Darwin")
+        list(APPEND SAN_LINK -static-libasan)
+    endif()
 endif()
 
 set(TEST_LIB_SOURCES ${EPANET_SOURCES} ${LSX_SOURCES})
@@ -74,6 +79,10 @@ target_compile_options(epanet_lsx_test PRIVATE
     ${SAN_COMPILE})
 set_target_properties(epanet_lsx_test PROPERTIES POSITION_INDEPENDENT_CODE ON)
 target_link_libraries(epanet_lsx_test PUBLIC m ${CMAKE_DL_LIBS})
+
+if(WIN32)
+    target_compile_definitions(epanet_lsx_test PUBLIC epanet2_EXPORTS)
+endif()
 
 file(GLOB_RECURSE TEST_FILES CONFIGURE_DEPENDS ${CMAKE_SOURCE_DIR}/tests/*.test.cpp)
 
