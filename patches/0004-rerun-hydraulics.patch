@@ -1,0 +1,35 @@
+diff --git a/src/epanet.c b/src/epanet.c
+index 5244332..96a6a81 100644
+--- a/src/epanet.c
++++ b/src/epanet.c
+@@ -602,17 +602,24 @@ int DLLEXPORT EN_runH(EN_Project p, long *currentTime)
+ **----------------------------------------------------------------
+ */
+ {
+-    int errcode;
++    int errcode = 0;
++    int changed = 0;
++    int iterations = 0;
+ 
+     *currentTime = 0;
+     if (!p->hydraul.OpenHflag) return 103;
+-    errcode = runhyd(p, currentTime);
+-    if (!errcode && EN_getprivatedata(p) != NULL)
++
++    // Solve hydraulics and run the LSX script in lockstep: whenever the script
++    // changes the network the solution is stale, so re-solve and re-run until
++    // the script settles (changed == 0) or the iteration cap is reached.
++    do
+     {
+-        int changed = 0;
++        errcode = runhyd(p, currentTime);
++        if (errcode || EN_getprivatedata(p) == NULL) break;
+         errcode = LSX_run(p, &changed);
+-        (void)changed;
+-    }
++        iterations++;
++    } while (!errcode && changed && iterations < MAX_LSX_ITERATIONS);
++
+     if (errcode) errmsg(p, errcode);
+     return errcode;
+ }

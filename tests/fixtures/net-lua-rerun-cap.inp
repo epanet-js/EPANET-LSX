@@ -1,0 +1,29 @@
+[TITLE]
+Lua script that never settles, to exercise the iteration cap
+
+[JUNCTIONS]
+ J1  100
+ J2   90
+
+[RESERVOIRS]
+ R1  200
+
+[PIPES]
+ P1  R1  J1  1000  12  100  0  Open
+ P2  J1  J2  1000  12  100  0  Open
+
+[SCRIPT]
+function on_hydraulic_step()
+  local j = node("J1")
+  j.elevation = j.elevation + 1
+end
+
+[COORDINATES]
+ J1  0  0
+ J2  1  0
+ R1  0  1
+
+[OPTIONS]
+ Units  LPS
+
+[END]
