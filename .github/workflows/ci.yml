@@ -7,16 +7,17 @@ permissions:
 
 jobs:
   test:
-    name: Test (${{ matrix.os }})
+    name: Test (${{ matrix.label }})
     strategy:
       fail-fast: false
       matrix:
-        os:
-          - ubuntu-latest
-          - ubuntu-24.04-arm
-          - macos-15-intel
-          - macos-14
-          - windows-latest
+        include:
+          - { os: ubuntu-latest,    label: linux-x64 }
+          - { os: ubuntu-24.04-arm, label: linux-aarch64 }
+          - { os: macos-15-intel,   label: macos-x64 }
+          - { os: macos-14,         label: macos-aarch64 }
+          - { os: windows-latest,   label: windows-x64, msystem: MINGW64, mingw: x86_64 }
+          - { os: windows-latest,   label: windows-x86, msystem: MINGW32, mingw: i686 }
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -27,18 +28,18 @@ jobs:
           path: |
             build/EPANET
             build/cest
-          key: ${{ runner.os }}-${{ runner.arch }}-epanet-v2-${{ hashFiles('patches/**', 'scripts/init.sh') }}
+          key: ${{ matrix.label }}-epanet-v2-${{ hashFiles('patches/**', 'scripts/init.sh') }}
 
       - name: Setup MSYS2 (Windows)
         if: runner.os == 'Windows'
         uses: msys2/setup-msys2@v2
         with:
-          msystem: MINGW64
+          msystem: ${{ matrix.msystem }}
           cache: true
           install: >-
             git make curl
-            mingw-w64-x86_64-gcc
-            mingw-w64-x86_64-cmake
+            mingw-w64-${{ matrix.mingw }}-gcc
+            mingw-w64-${{ matrix.mingw }}-cmake
 
       - name: Configure git identity (Unix)
         if: runner.os != 'Windows'

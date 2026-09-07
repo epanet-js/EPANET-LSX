@@ -187,9 +187,33 @@ static int setTimeValue(EN_Project project, int index, int code, double value) {
   return EN_settimeparam(project, code, lsxRound(value));
 }
 
+static int getNodeIndex(EN_Project project, const char *id, int *index) {
+  return EN_getnodeindex(project, id, index);
+}
+
+static int getNodeValue(EN_Project project, int index, int code, double *value) {
+  return EN_getnodevalue(project, index, code, value);
+}
+
+static int setNodeValue(EN_Project project, int index, int code, double value) {
+  return EN_setnodevalue(project, index, code, value);
+}
+
+static int getLinkIndex(EN_Project project, const char *id, int *index) {
+  return EN_getlinkindex(project, id, index);
+}
+
+static int getLinkValue(EN_Project project, int index, int code, double *value) {
+  return EN_getlinkvalue(project, index, code, value);
+}
+
+static int setLinkValue(EN_Project project, int index, int code, double value) {
+  return EN_setlinkvalue(project, index, code, value);
+}
+
 static const LuaApiFunc LuaApi[] = {
-  { "epanet.node",    "node",    NodeProps,   EN_getnodeindex, EN_getnodevalue, EN_setnodevalue },
-  { "epanet.link",    "link",    LinkProps,   EN_getlinkindex, EN_getlinkvalue, EN_setlinkvalue },
+  { "epanet.node",    "node",    NodeProps,   getNodeIndex, getNodeValue, setNodeValue },
+  { "epanet.link",    "link",    LinkProps,   getLinkIndex, getLinkValue, setLinkValue },
   { "epanet.options", "options", OptionProps, NULL,            getOptionValue,  NULL            },
   { "epanet.times",   "times",   TimeProps,   NULL,            getTimeValue,    setTimeValue    }
 };
