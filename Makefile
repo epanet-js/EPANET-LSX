@@ -1,19 +1,18 @@
-.PHONY: all init patch build test clean
+.PHONY: all init build test clean
 
 CMAKE_DIR := build/cmake
 
 all: build
 
-# Fetch the EPANET engine sources into build/EPANET.
+# Fetch the EPANET engine sources into build/EPANET and apply every patch in
+# patches/, in order. Patch application is idempotent: an already-applied patch
+# is skipped, so re-running init on a prepared tree is safe.
 init:
 	./scripts/init.sh
-
-# Apply every patch in patches/ to the EPANET sources, in order (idempotent).
-patch: init
 	./scripts/apply-patches.sh
 
-# Patch, then configure and build the epanet2 shared library into build/.
-build: patch
+# Configure and build the epanet2 shared library into build/.
+build: init
 	cmake -S . -B $(CMAKE_DIR)
 	cmake --build $(CMAKE_DIR)
 

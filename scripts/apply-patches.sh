@@ -31,7 +31,13 @@ fi
 IFS=$'\n' patches=($(sort <<<"${patches[*]}")); unset IFS
 
 for patch in "${patches[@]}"; do
-  echo "  -> Applying $(basename ${patch})..."
+  name="$(basename "${patch}")"
+  # Skip patches that are already applied so re-running is a no-op.
+  if git -C "${EPANET_DIR}" apply --reverse --check "${patch}" >/dev/null 2>&1; then
+    echo "  -> ${name} already applied, skipping."
+    continue
+  fi
+  echo "  -> Applying ${name}..."
   git -C "${EPANET_DIR}" apply --whitespace=fix "${patch}"
   git -C "${EPANET_DIR}" add .
   git -C "${EPANET_DIR}" commit -m "LSX patch - ${patch}"
