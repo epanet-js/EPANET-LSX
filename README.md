@@ -2,6 +2,8 @@
 
 Lua Scripting Extensions for [EPANET](https://github.com/OpenWaterAnalytics/EPANET).
 
+Check the API Reference in [docs/lua-api.md](docs/lua-api.md).
+
 EPANET-LSX builds the EPANET engine shared library with an embedded Lua
 interpreter, so a hydraulic model can express custom control logic inside the
 `.inp` file.
@@ -9,6 +11,31 @@ interpreter, so a hydraulic model can express custom control logic inside the
 The `[SCRIPT]` section holds Lua code that modifies the behavior of the
 network as the simulation runs. This allows control schemes that EPANET's
 built-in controls and rules cannot express.
+
+## Installing
+
+There are prebuilt versions of EPANET-LSX for:
+- Windows (32 and 64 bits)
+- macOS (Intel and Apple Silicon)
+- Linux (x86_64 and aarch64)
+
+Download the latest version of the EPANET library with LSX support and the `runepanet` command-line
+tool from the [releases](https://github.com/epanet-js/EPANET-LSX/releases) page in GitHub.
+
+EPANET-LSX can be used together with the new [EPANET-UI](https://github.com/OpenWaterAnalytics/EPANET-UI)
+by OpenWaterAnalytics. To use LSX with desktop EPANET:
+- Download and install EPANET-UI following the instructions on [OWA's website](https://sites.google.com/view/epanet-ui).
+- Download the latest release of EPANET-LSX for your target platform.
+- Locate the installation directory of EPANET-UI. For example, on a Windows platform it usually will be installed at
+`C:\Progam Files\EPANET-UI`.
+- Decompress the EPANET-LSX download and copy the `epanet2` library (on Windows it will be `epanet2.dll`, on Linux `libepanet2.so` and on macOS it will be `libepanet2.dylib`).
+- Paste the library into the EPANET-UI installation directory.
+- Run EPANET-UI and load any network with Lua script support. All program options should work as expected.
+
+**Note:** Since EPANET-UI has no provision for Lua scripts, the `[SCRIPT]` section won't be editable from within the app's UI.
+To edit it, modify the INP file with an external editor and re-load the network.
+
+**Note:** EPANET-LSX will not work with the legacy USEPA version of desktop EPANET. 
 
 ## Why include Lua in EPANET
 
@@ -45,6 +72,9 @@ When a script changes the network, the step is re-solved and the
 script runs again until it settles or an iteration cap is reached. The Lua API
 exposes `node(id)`, `link(id)`, `options()`, `times()`, `curve(id)`, and
 `print()`. A model with no `[SCRIPT]` section behaves exactly like stock EPANET.
+
+The full scripting reference — event handlers, execution model, and every node,
+link, option, and time property — is in [docs/lua-api.md](docs/lua-api.md).
 
 ## Building
 
