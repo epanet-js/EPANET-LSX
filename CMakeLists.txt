@@ -50,7 +50,12 @@ endif()
 target_link_libraries(runepanet PRIVATE epanet2 m ${CMAKE_DL_LIBS})
 
 if(MINGW)
-    target_link_options(epanet2 PRIVATE -static-libgcc -static)
+    # -static*: fold in the MinGW runtime so the binaries have no libgcc/
+    #   libwinpthread/libstdc++ DLL dependency at load time.
+    # --kill-at: strip the __stdcall "@<bytes>" suffix from the DLL's exports so
+    #   they are undecorated (ENopen, not ENopen@4) and match what applications
+    #   built against stock EPANET import. On x64 there is no suffix (no-op).
+    target_link_options(epanet2 PRIVATE -static-libgcc -static -Wl,--kill-at)
     target_link_options(runepanet PRIVATE -static-libgcc -static)
 endif()
 
