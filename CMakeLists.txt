@@ -65,12 +65,18 @@ endif()
 
 target_compile_options(epanet2 PRIVATE -O2)
 target_compile_options(runepanet PRIVATE -O2)
+if(APPLE)
+    # A full strip of a .dylib fails on macOS ("symbols referenced by indirect
+    # symbol table entries that can't be stripped") because it would remove the
+    # undefined libSystem imports. -x drops only local symbols and debug info.
+    set(LSX_STRIP_ARGS -x)
+endif()
 if(CMAKE_STRIP)
     add_custom_command(TARGET epanet2 POST_BUILD
-        COMMAND ${CMAKE_STRIP} $<TARGET_FILE:epanet2>
+        COMMAND ${CMAKE_STRIP} ${LSX_STRIP_ARGS} $<TARGET_FILE:epanet2>
         VERBATIM)
     add_custom_command(TARGET runepanet POST_BUILD
-        COMMAND ${CMAKE_STRIP} $<TARGET_FILE:runepanet>
+        COMMAND ${CMAKE_STRIP} ${LSX_STRIP_ARGS} $<TARGET_FILE:runepanet>
         VERBATIM)
 endif()
 
