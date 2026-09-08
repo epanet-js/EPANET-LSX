@@ -29,6 +29,10 @@ set_target_properties(epanet2 PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/build
 )
 
+if(WIN32)
+    set_target_properties(epanet2 PROPERTIES PREFIX "")
+endif()
+
 add_executable(runepanet ${EPANET_DIR}/run/main.c)
 target_include_directories(runepanet PRIVATE ${EPANET_DIR}/include)
 set_target_properties(runepanet PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/build)

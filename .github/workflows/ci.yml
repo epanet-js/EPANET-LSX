@@ -37,7 +37,7 @@ jobs:
           msystem: ${{ matrix.msystem }}
           cache: true
           install: >-
-            git make curl
+            git make curl zip
             mingw-w64-${{ matrix.mingw }}-gcc
             mingw-w64-${{ matrix.mingw }}-cmake
 
@@ -112,7 +112,7 @@ jobs:
           msystem: ${{ matrix.msystem }}
           cache: true
           install: >-
-            git make curl
+            git make curl zip
             mingw-w64-${{ matrix.mingw }}-gcc
             mingw-w64-${{ matrix.mingw }}-cmake
 
@@ -172,13 +172,21 @@ jobs:
           mkdir -p "$staging"
           cp build/runepanet.exe "$staging"/ 2>/dev/null || true
           cp build/*.dll "$staging"/ 2>/dev/null || true
-          tar -czf "${staging}.tar.gz" "$staging"
+          zip -r "${staging}.zip" "$staging"
 
-      - name: Upload artifact
+      - name: Upload artifact (Unix)
+        if: runner.os != 'Windows'
         uses: actions/upload-artifact@v4
         with:
           name: epanet-lsx-${{ matrix.artifact }}
           path: epanet-lsx-${{ matrix.artifact }}.tar.gz
+
+      - name: Upload artifact (Windows)
+        if: runner.os == 'Windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: epanet-lsx-${{ matrix.artifact }}
+          path: epanet-lsx-${{ matrix.artifact }}.zip
 
   release:
     name: Publish release
