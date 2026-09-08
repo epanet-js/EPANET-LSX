@@ -116,7 +116,11 @@ int LsxRuntime_RunIteration(LsxRuntime *runtime, int *changed) {
   if (has_handler) {
     return LsxEvents_Dispatch(runtime, LSX_EVENT_HYDRAULIC_STEP, changed);
   }
-  return runChunk(runtime, changed);
+
+  LsxRuntime_SetTimedEvent(runtime, 1);
+  int result = runChunk(runtime, changed);
+  LsxRuntime_SetTimedEvent(runtime, 0);
+  return result;
 }
 
 EN_Project LsxRuntime_Project(const LsxRuntime *runtime) {

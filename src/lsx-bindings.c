@@ -251,7 +251,9 @@ static int lua_epanet_print(lua_State *lua) {
     EN_gettimeparam(project, EN_HTIME, &htime);
     char clock[16];
     formatClock(htime, clock, sizeof(clock));
-    pos += snprintf(buf, sizeof(buf), "%s: ", clock);
+    pos += snprintf(buf, sizeof(buf), "%10s (Lua) ", clock);
+  } else {
+    pos += snprintf(buf, sizeof(buf), "(Lua) ");
   }
 
   for (int i = 1; i <= nargs; i++) {

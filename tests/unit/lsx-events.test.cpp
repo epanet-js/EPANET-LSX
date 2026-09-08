@@ -111,11 +111,11 @@ describe("LsxEvents", []() {
     expect(LsxRuntime_Parse(rt)).toBe(LSX_OK);
 
     expect(LsxEvents_Dispatch(rt, LSX_EVENT_OPEN, nullptr)).toBe(LSX_OK);
-    expect(report).toEqual("hi\n");
+    expect(report).toEqual("(Lua) hi\n");
 
     report.clear();
     expect(LsxEvents_Dispatch(rt, LSX_EVENT_HYDRAULIC_STEP, nullptr)).toBe(LSX_OK);
-    expect(report).toEqual("0:00:00: hi\n");
+    expect(report).toEqual("   0:00:00 (Lua) hi\n");
 
     LsxRuntime_Free(rt);
     EN_deleteproject(p);

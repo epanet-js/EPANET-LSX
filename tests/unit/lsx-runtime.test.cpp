@@ -14,6 +14,22 @@ using namespace TestHelpers;
 describe("LsxRuntime", []() {
   it("frees a NULL runtime harmlessly", [&]() { LsxRuntime_Free(nullptr); });
 
+  it("timestamps the global script body run each hydraulic step", [&]() {
+    std::string report;
+    EN_Project p = makeProject(&report);
+    LsxRuntime *rt = LsxRuntime_New(p);
+    LsxRuntime_SetScript(rt, dupScript("print('hi')"));
+    expect(LsxRuntime_Parse(rt)).toBe(LSX_OK);
+
+    report.clear();
+    int changed = 0;
+    expect(LsxRuntime_RunIteration(rt, &changed)).toBe(LSX_OK);
+    expect(report).toEqual("   0:00:00 (Lua) hi\n");
+
+    LsxRuntime_Free(rt);
+    EN_deleteproject(p);
+  });
+
   it("creates and frees a runtime", [&]() {
     EN_Project p = makeProject();
     LsxRuntime *rt = LsxRuntime_New(p);
