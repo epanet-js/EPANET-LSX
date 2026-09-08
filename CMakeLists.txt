@@ -49,6 +49,11 @@ endif()
 
 target_link_libraries(runepanet PRIVATE epanet2 m ${CMAKE_DL_LIBS})
 
+if(MINGW)
+    target_link_options(epanet2 PRIVATE -static-libgcc -static)
+    target_link_options(runepanet PRIVATE -static-libgcc -static)
+endif()
+
 enable_testing()
 set(CEST_DIR ${CMAKE_SOURCE_DIR}/vendor)   # vendored cest header (vendor/cest)
 
