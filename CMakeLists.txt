@@ -63,6 +63,17 @@ if(MINGW)
     target_link_options(runepanet PRIVATE -static-libgcc -static)
 endif()
 
+target_compile_options(epanet2 PRIVATE -O2)
+target_compile_options(runepanet PRIVATE -O2)
+if(CMAKE_STRIP)
+    add_custom_command(TARGET epanet2 POST_BUILD
+        COMMAND ${CMAKE_STRIP} $<TARGET_FILE:epanet2>
+        VERBATIM)
+    add_custom_command(TARGET runepanet POST_BUILD
+        COMMAND ${CMAKE_STRIP} $<TARGET_FILE:runepanet>
+        VERBATIM)
+endif()
+
 enable_testing()
 set(CEST_DIR ${CMAKE_SOURCE_DIR}/vendor)   # vendored cest header (vendor/cest)
 
