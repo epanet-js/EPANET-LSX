@@ -33,8 +33,23 @@ if(WIN32)
     set_target_properties(epanet2 PROPERTIES PREFIX "")
 endif()
 
-add_executable(runepanet ${EPANET_DIR}/run/main.c)
-target_include_directories(runepanet PRIVATE ${EPANET_DIR}/include)
+# runepanet is a standalone CLI: it compiles the EPANET + LSX engine in directly
+# rather than linking epanet2.dll, so it is immune to the DLL's Windows export
+# decoration. The DLL's drop-in exports are verified separately by the
+# LoadLibrary smoke test in CI.
+add_executable(runepanet ${EPANET_DIR}/run/main.c ${EPANET_SOURCES} ${LSX_SOURCES})
+target_include_directories(runepanet PRIVATE
+    ${EPANET_DIR}/include
+    ${EPANET_DIR}/src
+    ${EPANET_DIR}/src/util
+    ${CMAKE_SOURCE_DIR}/include
+    ${CMAKE_SOURCE_DIR}/src
+    ${CMAKE_SOURCE_DIR}/vendor)
+
+if(WIN32)
+    # Define the engine functions here (dllexport) rather than importing them.
+    target_compile_definitions(runepanet PRIVATE epanet2_EXPORTS)
+endif()
 set_target_properties(runepanet PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/build)
 
 if(APPLE)
@@ -51,20 +66,17 @@ if(MSVC)
     target_compile_options(runepanet PRIVATE -MT)
 endif()
 
-target_link_libraries(runepanet PRIVATE epanet2 m ${CMAKE_DL_LIBS})
+target_link_libraries(runepanet PRIVATE m ${CMAKE_DL_LIBS})
 
 if(MINGW)
-    # -static*: fold in the MinGW runtime so the binaries have no libgcc/
-    #   libwinpthread/libstdc++ DLL dependency at load time.
-    # --kill-at: strip the __stdcall "@<bytes>" suffix from the DLL's exports so
-    #   they are undecorated (ENopen, not ENopen@4) and match what applications
-    #   built against stock EPANET import. On x64 there is no suffix (no-op).
-    # --enable-stdcall-fixup: --kill-at also un-decorates epanet2's import
-    #   library, so runepanet (compiled against the __stdcall headers, which
-    #   reference _imp__EN...@N) needs the linker to fuzzy-match those to the
-    #   undecorated import symbols.
+    # -static*: fold in the MinGW runtime so the binaries carry no libgcc /
+    #   libwinpthread / libstdc++ DLL dependency at load time.
+    # --kill-at: strip the __stdcall "@<bytes>" suffix so epanet2.dll exports
+    #   undecorated names (ENopen, not ENopen@4), matching stock EPANET for a
+    #   drop-in replacement. On x64 there is no suffix (no-op). runepanet does
+    #   not link the DLL, so it is unaffected.
     target_link_options(epanet2 PRIVATE -static-libgcc -static -Wl,--kill-at)
-    target_link_options(runepanet PRIVATE -static-libgcc -static -Wl,--enable-stdcall-fixup)
+    target_link_options(runepanet PRIVATE -static-libgcc -static)
 endif()
 
 target_compile_options(epanet2 PRIVATE -O2)

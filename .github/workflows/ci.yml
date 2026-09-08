@@ -66,6 +66,13 @@ jobs:
         shell: msys2 {0}
         run: make test
 
+      - name: Verify epanet2.dll drop-in exports (Windows)
+        if: runner.os == 'Windows'
+        shell: msys2 {0}
+        run: |
+          cc -o dll-smoke.exe tests/win/dll-smoke.c
+          ./dll-smoke.exe build/epanet2.dll
+
   release-build:
     name: Build release (${{ matrix.artifact }})
     if: startsWith(github.ref, 'refs/tags/')
