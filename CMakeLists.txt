@@ -59,8 +59,12 @@ if(MINGW)
     # --kill-at: strip the __stdcall "@<bytes>" suffix from the DLL's exports so
     #   they are undecorated (ENopen, not ENopen@4) and match what applications
     #   built against stock EPANET import. On x64 there is no suffix (no-op).
+    # --enable-stdcall-fixup: --kill-at also un-decorates epanet2's import
+    #   library, so runepanet (compiled against the __stdcall headers, which
+    #   reference _imp__EN...@N) needs the linker to fuzzy-match those to the
+    #   undecorated import symbols.
     target_link_options(epanet2 PRIVATE -static-libgcc -static -Wl,--kill-at)
-    target_link_options(runepanet PRIVATE -static-libgcc -static)
+    target_link_options(runepanet PRIVATE -static-libgcc -static -Wl,--enable-stdcall-fixup)
 endif()
 
 target_compile_options(epanet2 PRIVATE -O2)
