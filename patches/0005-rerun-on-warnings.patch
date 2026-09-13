@@ -1,0 +1,28 @@
+diff --git a/src/epanet.c b/src/epanet.c
+index 96a6a81..9689fab 100644
+--- a/src/epanet.c
++++ b/src/epanet.c
+@@ -603,6 +603,7 @@ int DLLEXPORT EN_runH(EN_Project p, long *currentTime)
+ */
+ {
+     int errcode = 0;
++    int lsxcode = 0;
+     int changed = 0;
+     int iterations = 0;
+ 
+@@ -615,10 +616,12 @@ int DLLEXPORT EN_runH(EN_Project p, long *currentTime)
+     do
+     {
+         errcode = runhyd(p, currentTime);
+-        if (errcode || EN_getprivatedata(p) == NULL) break;
+-        errcode = LSX_run(p, &changed);
++        if (errcode > 100 || EN_getprivatedata(p) == NULL) break;
++        lsxcode = LSX_run(p, &changed);
+         iterations++;
+-    } while (!errcode && changed && iterations < MAX_LSX_ITERATIONS);
++    } while (!lsxcode && changed && iterations < MAX_LSX_ITERATIONS);
++
++    if (lsxcode) errcode = lsxcode;
+ 
+     if (errcode) errmsg(p, errcode);
+     return errcode;

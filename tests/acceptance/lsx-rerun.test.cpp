@@ -49,4 +49,18 @@ describe("LSX hydraulic re-run loop", []() {
     EN_close(p);
     EN_deleteproject(p);
   });
+
+  it("runs the script when the hydraulic solve returns a warning", [&]() {
+    EN_Project p = nullptr;
+    EN_createproject(&p);
+    expect(EN_open(p, fixture("net-lua-rerun-warning.inp").c_str(), LSX_NULL_DEVICE,
+                   ""))
+        .toBe(0);
+    expect(EN_solveH(p)).toBe(6);
+
+    expect(j1Elevation(p)).toBe(103);
+
+    EN_close(p);
+    EN_deleteproject(p);
+  });
 });
