@@ -134,6 +134,25 @@ to 255 characters.
 print("tank level", node("T1").head - node("T1").elevation)
 ```
 
+### `warning(...)`
+
+Writes a line to the report like `print`, prefixed with `WARNING: `, and flags
+the run as having warnings. The step still completes, and any pending re-solves
+still run.
+
+- Called while a step is being solved (`on_hydraulic_step`, or the global chunk),
+  `EN_runH` for that step returns warning code `7` instead of `0`.
+- Called from `on_open` or `on_hydraulics_solved`, the call itself returns
+  normally, but the project's warning flag is set.
+- Called from `on_close` only writes to the report.
+
+```lua
+local p = node("J126").pressure
+if p < 20.0 then
+  warning("J126 below 20 m", p)    -- "   1:00:00 (Lua) WARNING: J126 below 20 m	18.4"
+end
+```
+
 ## Property values and units
 
 Field values match the EPANET toolkit's `EN_getnodevalue` / `EN_setnodevalue`,

@@ -126,6 +126,63 @@ describe("LsxRuntime", []() {
     EN_deleteproject(p);
   });
 
+  it("writes warning() to report and flags EPANET project", [&]() {
+    std::string report;
+    EN_Project p = makeProject(&report);
+    LsxRuntime *rt = LsxRuntime_New(p);
+    LsxRuntime_SetScript(rt, dupScript("warning('low', 12)"));
+    expect(LsxRuntime_Parse(rt)).toBe(LSX_OK);
+    expect(LsxRuntime_ClearWarning(rt)).toBe(1);
+
+    report.clear();
+    int changed = 0;
+    expect(LsxRuntime_RunIteration(rt, &changed)).toBe(LSX_OK);
+    expect(report).toEqual("   0:00:00 (Lua) WARNING: low\t12\n");
+    expect(LsxRuntime_ClearWarning(rt)).toBe(1);
+    expect(LsxRuntime_ClearWarning(rt)).toBe(0);
+
+    LsxRuntime_Free(rt);
+    EN_deleteproject(p);
+  });
+
+  it("does not flag a warning for print()", [&]() {
+    EN_Project p = makeProject();
+    LsxRuntime *rt = LsxRuntime_New(p);
+    LsxRuntime_SetScript(rt, dupScript("print('hi')"));
+    expect(LsxRuntime_Parse(rt)).toBe(LSX_OK);
+
+    int changed = 0;
+    expect(LsxRuntime_RunIteration(rt, &changed)).toBe(LSX_OK);
+    expect(LsxRuntime_ClearWarning(rt)).toBe(0);
+
+    LsxRuntime_Free(rt);
+    EN_deleteproject(p);
+  });
+
+  it("takes no warning from a NULL runtime", [&]() {
+    expect(LsxRuntime_ClearWarning(nullptr)).toBe(0);
+  });
+
+  it("keeps warnings of two concurrent runtimes independent", [&]() {
+    EN_Project p1 = makeProject();
+    EN_Project p2 = makeProject();
+    LsxRuntime *rt1 = LsxRuntime_New(p1);
+    LsxRuntime *rt2 = LsxRuntime_New(p2);
+
+    LsxRuntime_SetScript(rt1, dupScript("warning('only here')"));
+    LsxRuntime_SetScript(rt2, dupScript("local x = 1"));
+    expect(LsxRuntime_Parse(rt1)).toBe(LSX_OK);
+    expect(LsxRuntime_Parse(rt2)).toBe(LSX_OK);
+
+    expect(LsxRuntime_ClearWarning(rt1)).toBe(1);
+    expect(LsxRuntime_ClearWarning(rt2)).toBe(0);
+
+    LsxRuntime_Free(rt1);
+    LsxRuntime_Free(rt2);
+    EN_deleteproject(p1);
+    EN_deleteproject(p2);
+  });
+
   it("keeps two concurrent runtimes independent", [&]() {
     EN_Project p1 = makeProject();
     EN_Project p2 = makeProject();

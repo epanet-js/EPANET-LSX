@@ -120,4 +120,24 @@ describe("LsxEvents", []() {
     LsxRuntime_Free(rt);
     EN_deleteproject(p);
   });
+
+  it("timestamps warning() only for timed events", [&]() {
+    std::string report;
+    EN_Project p = makeProject(&report);
+    LsxRuntime *rt = LsxRuntime_New(p);
+    LsxRuntime_SetScript(rt,
+                         dupScript("function on_open() warning('hi') end\n"
+                                   "function on_hydraulic_step() warning('hi') end\n"));
+    expect(LsxRuntime_Parse(rt)).toBe(LSX_OK);
+
+    expect(LsxEvents_Dispatch(rt, LSX_EVENT_OPEN, nullptr)).toBe(LSX_OK);
+    expect(report).toEqual("(Lua) WARNING: hi\n");
+
+    report.clear();
+    expect(LsxEvents_Dispatch(rt, LSX_EVENT_HYDRAULIC_STEP, nullptr)).toBe(LSX_OK);
+    expect(report).toEqual("   0:00:00 (Lua) WARNING: hi\n");
+
+    LsxRuntime_Free(rt);
+    EN_deleteproject(p);
+  });
 });

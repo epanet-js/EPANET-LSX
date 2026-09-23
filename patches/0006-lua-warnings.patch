@@ -1,0 +1,49 @@
+diff --git a/src/epanet.c b/src/epanet.c
+index 9689fab..054ed1d 100644
+--- a/src/epanet.c
++++ b/src/epanet.c
+@@ -588,6 +588,7 @@ int DLLEXPORT EN_initH(EN_Project p, int initFlag)
+     if (!errcode && EN_getprivatedata(p) != NULL)
+     {
+         errcode = LSX_init(p);
++        if (LSX_warning(p)) p->Warnflag = LSX_WARNING;
+     }
+ 
+     return errcode;
+@@ -623,6 +624,13 @@ int DLLEXPORT EN_runH(EN_Project p, long *currentTime)
+ 
+     if (lsxcode) errcode = lsxcode;
+ 
++    // A warning() from the script completes the step with an LSX warning
++    if (EN_getprivatedata(p) != NULL && LSX_warning(p) && errcode <= 100)
++    {
++        p->Warnflag = LSX_WARNING;
++        errcode = LSX_WARNING;
++    }
++
+     if (errcode) errmsg(p, errcode);
+     return errcode;
+ }
+@@ -641,7 +649,11 @@ int DLLEXPORT EN_nextH(EN_Project p, long *tStep)
+     *tStep = 0;
+     if (!p->hydraul.OpenHflag) return 103;
+     errcode = nexthyd(p, tStep);
+-    if (!errcode && EN_getprivatedata(p) != NULL) errcode = LSX_next(p);
++    if (!errcode && EN_getprivatedata(p) != NULL)
++    {
++        errcode = LSX_next(p);
++        if (LSX_warning(p)) p->Warnflag = LSX_WARNING;
++    }
+     if (errcode) errmsg(p, errcode);
+     else if (p->outfile.Saveflag && *tStep == 0) p->outfile.SaveHflag = TRUE;
+     return errcode;
+@@ -1115,6 +1127,9 @@ int DLLEXPORT EN_geterror(int errcode, char *errmsg, int maxLen)
+     case 6:
+         strncpy(errmsg, WARN6, maxLen);
+         break;
++    case LSX_WARNING:
++        strncpy(errmsg, LSX_WARNING_TEXT, maxLen);
++        break;
+     default:
+         sprintf(msg1, "Error %d: ", errcode);
+         if ((errcode >= 202 && errcode <= 222) ||

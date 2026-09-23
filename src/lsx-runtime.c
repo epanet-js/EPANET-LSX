@@ -11,6 +11,7 @@ struct LsxRuntime {
   lua_State *state;
   char *script;
   int changed;
+  int warned;
   int global_closure_ref;
   int timed_event;
 };
@@ -141,6 +142,17 @@ void LsxRuntime_ResetChanged(LsxRuntime *runtime) {
 
 int LsxRuntime_Changed(const LsxRuntime *runtime) {
   return runtime->changed;
+}
+
+void LsxRuntime_MarkWarning(LsxRuntime *runtime) {
+  if (runtime != NULL) runtime->warned = 1;
+}
+
+int LsxRuntime_ClearWarning(LsxRuntime *runtime) {
+  if (runtime == NULL) return 0;
+  int warned = runtime->warned;
+  runtime->warned = 0;
+  return warned;
 }
 
 void LsxRuntime_SetTimedEvent(LsxRuntime *runtime, int on) {

@@ -49,6 +49,12 @@ int LSX_next(EN_Project project) {
   return LsxEvents_Dispatch(runtime, LSX_EVENT_HYDRAULICS_SOLVED, NULL);
 }
 
+int LSX_warning(EN_Project project) {
+  LsxRuntime *runtime = EN_getprivatedata(project);
+  if (!LsxRuntime_ClearWarning(runtime)) return LSX_OK;
+  return LSX_WARNING;
+}
+
 int LSX_close(EN_Project project) {
   LsxRuntime *runtime = EN_getprivatedata(project);
   if (runtime == NULL) return LSX_OK;

@@ -239,8 +239,8 @@ static const char *stringOrEmpty(lua_State *lua, int arg) {
   return s;
 }
 
-static int lua_epanet_print(lua_State *lua) {
-  LsxRuntime *runtime = lua_touserdata(lua, lua_upvalueindex(1));
+static void writeScriptLine(lua_State *lua, LsxRuntime *runtime,
+                            const char *prefix) {
   EN_Project project = LsxRuntime_Project(runtime);
   char buf[LSX_MAX_MSG + 1];
   int nargs = lua_gettop(lua);
@@ -251,9 +251,9 @@ static int lua_epanet_print(lua_State *lua) {
     EN_gettimeparam(project, EN_HTIME, &htime);
     char clock[16];
     formatClock(htime, clock, sizeof(clock));
-    pos += snprintf(buf, sizeof(buf), "%10s (Lua) ", clock);
+    pos += snprintf(buf, sizeof(buf), "%10s (Lua) %s", clock, prefix);
   } else {
-    pos += snprintf(buf, sizeof(buf), "(Lua) ");
+    pos += snprintf(buf, sizeof(buf), "(Lua) %s", prefix);
   }
 
   for (int i = 1; i <= nargs; i++) {
@@ -273,6 +273,18 @@ static int lua_epanet_print(lua_State *lua) {
 
   buf[pos] = '\0';
   EN_writeline(project, buf);
+}
+
+static int lua_epanet_print(lua_State *lua) {
+  LsxRuntime *runtime = lua_touserdata(lua, lua_upvalueindex(1));
+  writeScriptLine(lua, runtime, "");
+  return 0;
+}
+
+static int lua_epanet_warning(lua_State *lua) {
+  LsxRuntime *runtime = lua_touserdata(lua, lua_upvalueindex(1));
+  writeScriptLine(lua, runtime, "WARNING: ");
+  LsxRuntime_MarkWarning(runtime);
   return 0;
 }
 
@@ -403,6 +415,10 @@ void LsxBindings_Register(lua_State *lua, LsxRuntime *runtime) {
   lua_pushlightuserdata(lua, runtime);
   lua_pushcclosure(lua, lua_epanet_print, 1);
   lua_setglobal(lua, "print");
+
+  lua_pushlightuserdata(lua, runtime);
+  lua_pushcclosure(lua, lua_epanet_warning, 1);
+  lua_setglobal(lua, "warning");
 
   lua_pushlightuserdata(lua, runtime);
   lua_pushcclosure(lua, lua_curve_points, 1);

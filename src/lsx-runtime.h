@@ -24,5 +24,7 @@ lua_State *LsxRuntime_State(const LsxRuntime *runtime);
 void LsxRuntime_MarkChanged(LsxRuntime *runtime);
 void LsxRuntime_ResetChanged(LsxRuntime *runtime);
 int LsxRuntime_Changed(const LsxRuntime *runtime);
+void LsxRuntime_MarkWarning(LsxRuntime *runtime);
+int LsxRuntime_ClearWarning(LsxRuntime *runtime);
 void LsxRuntime_SetTimedEvent(LsxRuntime *runtime, int on);
 int LsxRuntime_IsTimedEvent(const LsxRuntime *runtime);
