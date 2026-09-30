@@ -16,12 +16,26 @@ typedef struct {
   int index;
 } LuaElem;
 
-// A Lua-facing property name mapped to its EN_ property code.
+// A toolkit unit code mapped to the short name Lua sees.
+typedef struct {
+  int code;
+  const char *name;
+} UnitName;
+
+// A Lua-facing property name mapped to its EN_ property code. A property with
+// a names table reads as the string mapped from its numeric value.
 typedef struct {
   const char *name;
   int code;
   int writable;
+  const UnitName *names;
 } PropDesc;
+
+// Codes for the project-wide units object, which has no toolkit equivalent.
+enum {
+  LSX_FLOW_UNITS,
+  LSX_PRESSURE_UNITS
+};
 
 // An object type: its Lua names, its property table and the public toolkit
 // functions used to look it up and to read/write its properties. A NULL find
@@ -159,6 +173,36 @@ static const PropDesc TimeProps[] = {
   { NULL,                   0,                LSX_READ_ONLY }
 };
 
+static const UnitName FlowUnitNames[] = {
+  { EN_CFS,  "cfs"  },
+  { EN_GPM,  "gpm"  },
+  { EN_MGD,  "mgd"  },
+  { EN_IMGD, "imgd" },
+  { EN_AFD,  "afd"  },
+  { EN_LPS,  "lps"  },
+  { EN_LPM,  "lpm"  },
+  { EN_MLD,  "mld"  },
+  { EN_CMH,  "cmh"  },
+  { EN_CMD,  "cmd"  },
+  { EN_CMS,  "cms"  },
+  { 0,       NULL   }
+};
+
+static const UnitName PressureUnitNames[] = {
+  { EN_PSI,    "psi" },
+  { EN_KPA,    "kpa" },
+  { EN_METERS, "m"   },
+  { EN_BAR,    "bar" },
+  { EN_FEET,   "ft"  },
+  { 0,         NULL  }
+};
+
+static const PropDesc UnitProps[] = {
+  { "flow",     LSX_FLOW_UNITS,     LSX_READ_ONLY, FlowUnitNames     },
+  { "pressure", LSX_PRESSURE_UNITS, LSX_READ_ONLY, PressureUnitNames },
+  { NULL,       0,                  LSX_READ_ONLY, NULL              }
+};
+
 static double lsxAbs(double x) {
   return x < 0.0 ? -x : x;
 }
@@ -171,6 +215,20 @@ static int getOptionValue(EN_Project project, int index, int code,
                           double *value) {
   (void)index;
   return EN_getoption(project, code, value);
+}
+
+static int getUnitsValue(EN_Project project, int index, int code,
+                         double *value) {
+  (void)index;
+  int units = 0;
+  int err;
+  if (code == LSX_FLOW_UNITS) {
+    err = EN_getflowunits(project, &units);
+    *value = (double)units;
+  } else {
+    err = EN_getoption(project, EN_PRESS_UNITS, value);
+  }
+  return err;
 }
 
 static int getTimeValue(EN_Project project, int index, int code,
@@ -215,13 +273,21 @@ static const LuaApiFunc LuaApi[] = {
   { "epanet.node",    "node",    NodeProps,   getNodeIndex, getNodeValue, setNodeValue },
   { "epanet.link",    "link",    LinkProps,   getLinkIndex, getLinkValue, setLinkValue },
   { "epanet.options", "options", OptionProps, NULL,            getOptionValue,  NULL            },
-  { "epanet.times",   "times",   TimeProps,   NULL,            getTimeValue,    setTimeValue    }
+  { "epanet.times",   "times",   TimeProps,   NULL,            getTimeValue,    setTimeValue    },
+  { "epanet.units",   "units",   UnitProps,   NULL,            getUnitsValue,   NULL            }
 };
 
 static const PropDesc *findElementProperty(const PropDesc *props,
                                            const char *name) {
   for (; props->name != NULL; props++) {
     if (strcmp(props->name, name) == 0) return props;
+  }
+  return NULL;
+}
+
+static const char *findUnitName(const UnitName *units, int code) {
+  for (; units->name != NULL; units++) {
+    if (units->code == code) return units->name;
   }
   return NULL;
 }
@@ -356,7 +422,16 @@ static int lua_elem_index(lua_State *lua) {
   int err = d->get(project, e->index, p->code, &value);
   if (err) return luaL_error(lua, "error %d reading %s.%s", err, d->global, key);
 
-  lua_pushnumber(lua, value);
+  if (p->names == NULL) {
+    lua_pushnumber(lua, value);
+    return 1;
+  }
+
+  const char *name = findUnitName(p->names, (int)lsxRound(value));
+  if (name == NULL) {
+    return luaL_error(lua, "unknown %s.%s code: %g", d->global, key, value);
+  }
+  lua_pushstring(lua, name);
   return 1;
 }
 

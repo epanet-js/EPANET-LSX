@@ -173,15 +173,42 @@ inline void readOption(const char *prop, int code, double value) {
   EN_deleteproject(p);
 }
 
-inline void expectReadOnly(const std::string &lvalue) {
+inline void expectUnitName(EN_Project p, const char *prop, const char *name) {
+  LsxRuntime *rt = LsxRuntime_New(p);
+  LsxRuntime_SetScript(rt, dupScript(std::string("assert(units().") + prop +
+                                     " == '" + name + "', '" + prop + "')"));
+  expect(LsxRuntime_Parse(rt)).toBe(LSX_OK);
+  int changed = 0;
+  expect(LsxRuntime_RunIteration(rt, &changed)).toBe(LSX_OK);
+  LsxRuntime_Free(rt);
+  EN_deleteproject(p);
+}
+
+inline void readFlowUnits(int code, const char *name) {
+  EN_Project p = makeNetwork();
+  expect(EN_setflowunits(p, code)).toBe(0);
+  expectUnitName(p, "flow", name);
+}
+
+inline void readPressureUnits(int code, const char *name) {
+  EN_Project p = makeNetwork();
+  expect(EN_setoption(p, EN_PRESS_UNITS, (double)code)).toBe(0);
+  expectUnitName(p, "pressure", name);
+}
+
+inline void expectRuntimeError(const std::string &script) {
   EN_Project p = makeNetwork();
   LsxRuntime *rt = LsxRuntime_New(p);
-  LsxRuntime_SetScript(rt, dupScript(lvalue + " = 1"));
+  LsxRuntime_SetScript(rt, dupScript(script));
   expect(LsxRuntime_Parse(rt)).toBe(LSX_OK);
   int changed = 0;
   expect(LsxRuntime_RunIteration(rt, &changed)).toBe(LSX_ERR_RUNTIME);
   LsxRuntime_Free(rt);
   EN_deleteproject(p);
+}
+
+inline void expectReadOnly(const std::string &lvalue) {
+  expectRuntimeError(lvalue + " = 1");
 }
 
 }

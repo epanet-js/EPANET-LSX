@@ -44,6 +44,22 @@ describe("LSX acceptance", []() {
     expect(report.find("value is 42") != std::string::npos).toBe(true);
   });
 
+  it("reports the INP file's flow and pressure units", [&]() {
+    EN_Project p = nullptr;
+    EN_createproject(&p);
+    expect(EN_open(p, fixture("net-lua-units.inp").c_str(), kReportSink, ""))
+        .toBe(0);
+
+    std::string report;
+    captureInto(p, &report);
+    expect(EN_solveH(p)).toBeLessThan(100);
+    EN_close(p);
+    EN_deleteproject(p);
+
+    expect(report.find("(Lua) flow=cmh\tpressure=kpa\n") != std::string::npos)
+        .toBe(true);
+  });
+
   it("applies a script's write to the network", [&]() {
     EN_Project p = nullptr;
     EN_createproject(&p);

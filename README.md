@@ -35,7 +35,7 @@ by OpenWaterAnalytics. To use LSX with desktop EPANET:
 **Note:** Since EPANET-UI has no provision for Lua scripts, the `[SCRIPT]` section won't be editable from within the app's UI.
 To edit it, modify the INP file with an external editor and re-load the network.
 
-**Note:** EPANET-LSX will not work with the legacy USEPA version of desktop EPANET. 
+**Note:** EPANET-LSX will not work with the legacy USEPA version of desktop EPANET.
 
 ## Why include Lua in EPANET
 
@@ -69,9 +69,8 @@ through event handlers: `on_open`, `on_hydraulic_step`, `on_hydraulics_solved`,
 and `on_close`.
 
 When a script changes the network, the step is re-solved and the
-script runs again until it settles or an iteration cap is reached. The Lua API
-exposes `node(id)`, `link(id)`, `options()`, `times()`, `curve(id)`, and
-`print()`. A model with no `[SCRIPT]` section behaves exactly like stock EPANET.
+script runs again until it settles or an iteration cap is reached.
+A model with no `[SCRIPT]` section behaves exactly like stock EPANET.
 
 The full scripting reference — event handlers, execution model, and every node,
 link, option, and time property — is in [docs/lua-api.md](docs/lua-api.md).

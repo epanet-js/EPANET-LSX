@@ -80,10 +80,32 @@ static const std::vector<Prop> kOptionProps = {
     {nullptr, "damp_limit", EN_DAMPLIMIT, 0.1},
 };
 
+struct UnitCase {
+  int code;
+  const char *name;
+};
+
+static const std::vector<UnitCase> kFlowUnits = {
+    {EN_CFS, "cfs"}, {EN_GPM, "gpm"}, {EN_MGD, "mgd"}, {EN_IMGD, "imgd"},
+    {EN_AFD, "afd"}, {EN_LPS, "lps"}, {EN_LPM, "lpm"}, {EN_MLD, "mld"},
+    {EN_CMH, "cmh"}, {EN_CMD, "cmd"}, {EN_CMS, "cms"},
+};
+
+static const std::vector<UnitCase> kPressureUnits = {
+    {EN_PSI, "psi"}, {EN_KPA, "kpa"}, {EN_METERS, "m"},
+    {EN_BAR, "bar"}, {EN_FEET, "ft"},
+};
+
 static const std::vector<std::string> kReadOnly = {
     "node('J1').pressure", "node('J1').head",   "node('J1').demand",
     "link('P1').flow",     "link('P1').velocity", "link('P1').headloss",
     "options().trials",    "options().accuracy",  "times().periods",
+    "units().flow",        "units().pressure",
+};
+
+static const std::vector<std::string> kUnknownProps = {
+    "node('J1').nope", "link('P1').nope", "options().nope", "times().nope",
+    "units().nope",
 };
 
 describe("LSX API surface", []() {
@@ -107,8 +129,23 @@ describe("LSX API surface", []() {
        [c]() { readOption(c.prop, c.code, c.value); });
   }
 
+  for (const UnitCase c : kFlowUnits) {
+    it(std::string("reads units.flow as ") + c.name,
+       [c]() { readFlowUnits(c.code, c.name); });
+  }
+
+  for (const UnitCase c : kPressureUnits) {
+    it(std::string("reads units.pressure as ") + c.name,
+       [c]() { readPressureUnits(c.code, c.name); });
+  }
+
   for (const std::string lvalue : kReadOnly) {
     it(std::string("rejects writing read-only ") + lvalue,
        [lvalue]() { expectReadOnly(lvalue); });
+  }
+
+  for (const std::string rvalue : kUnknownProps) {
+    it(std::string("rejects reading unknown ") + rvalue,
+       [rvalue]() { expectRuntimeError("local x = " + rvalue); });
   }
 });

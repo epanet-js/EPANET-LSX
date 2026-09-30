@@ -63,7 +63,7 @@ mode) changes a network property, the current solution is stale, so the engine
 re-solves the step and runs the script again. This repeats until the script stops
 changing the network or the iteration cap is reached.
 
-- The cap is **``10** re-solves per time step.
+- The cap is **10** re-solves per time step.
 - A write only counts as a change if the stored value actually moved (beyond a
   tiny tolerance). Re-writing a property to its current value does **not** keep
   the step iterating.
@@ -110,6 +110,24 @@ writable fields are rounded to the nearest second when written.
 ```lua
 local hour = (times().hydraulic_time % 86400) / 3600
 times().report_step = 900
+```
+
+### `units()`
+
+Returns the project-wide units object. Both fields are **read-only** strings,
+so scripts can adapt setpoints or messages to whatever units the model uses.
+
+| Field | Values |
+| --- | --- |
+| `flow` | `"cfs"`, `"gpm"`, `"mgd"`, `"imgd"`, `"afd"`, `"lps"`, `"lpm"`, `"mld"`, `"cmh"`, `"cmd"`, `"cms"` |
+| `pressure` | `"psi"`, `"kpa"`, `"m"`, `"bar"`, `"ft"` |
+
+`flow` maps `EN_getflowunits` / `EN_FlowUnits` and `pressure` maps
+`EN_getoption(EN_PRESS_UNITS)` / `EN_PressUnits`.
+
+```lua
+local set_point = units().pressure == "psi" and 35.0 or 25.0
+print("flow in " .. units().flow)
 ```
 
 ### `curve(id)`
